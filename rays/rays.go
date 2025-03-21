@@ -20,11 +20,15 @@ func formatProcessList(process process) string {
 		state = " ❌"
 	}
 	state += " (" + process.State + ")" 
-	var content = process.Project.Name + state + ": On port " + strconv.Itoa(process.Port) + ", " + strconv.Itoa(len(process.Processes)) + " active processes."
+	var content = process.Project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
 
-	for _, process := range process.Processes {
-		content += "\n- PID: "+ strconv.Itoa(process)
+	for indx, process := range process.Processes {
+		content += "\n- PID (process " + strconv.Itoa(indx + 1) + "): "+ strconv.Itoa(process)
 	}
+
+	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
+	content += "\n- Deployment: "+ process.Branch
+
 	return content
 }
 
@@ -37,7 +41,6 @@ func main() {
 		rlog.Println("Ray server daemon launched.")
 		rlog.Println("Setting up ray enviroument...")
 		SetupEnv()
-		rlog.Println("Setup and deployed all projects.")
 		go daemonListen()
 		startProxy()
 		select {}

@@ -10,15 +10,21 @@ import (
 	"os/signal"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
-
+type deployment struct {
+	Branch string
+	Type string
+	Enrollment int
+}
 
 type project struct {
 	Src string
 	Name string
 	EnvVars map[string]string
 	Domain string
+	Deployments []deployment
 }
 
 type raydata struct {
@@ -49,6 +55,7 @@ type process struct {
 	Active bool
 	State string
 	remove func()
+	Branch string
 }
 var exiting = false
 var processes []*process
@@ -123,8 +130,8 @@ func waitForPortOpen(process *process) {
 	}
 }
 
-func launchProject(configPath string, dir string, project *project, swapfunction *func()) {
-	rlog.Println("Attempting to launch project " + project.Name)
+func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string) {
+	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
 	if (err != nil) {
 		rlog.Fatal(err)
@@ -132,6 +139,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 
 	var config projectConfig
 	var process process
+	process.Branch = branch
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
@@ -183,17 +191,17 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		}
 
 		if (err != nil) {
-			if (err == &exec.Error{}) {
-				rlog.Notify("Failed to deploy " + project.Name + ": the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.", "err")
+			if (strings.Contains(err.Error(), exec.ErrNotFound.Error())) {
+				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch + "): the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.", "err")
 			} else {
-				rlog.Notify("Failed to deploy, is there and issue with your command?", "err")
-				rlog.Notify("", "err")
-				rlog.Notify(cmd.Stdout, "err")
+				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch +"), is there and issue with your command?", "err")
+				rlog.BuildNotify("", "err")
+				rlog.BuildNotify(cmd.Stdout, "err")
 			}
 			process.Active = false
 			process.State = err.Error()
 		} else {
-			rlog.Notify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ")", "done") 
+			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
 				process.Processes = append(process.Processes, cmd.Process.Pid)
 				go trackProcess(cmd, &process, &stderr)
@@ -213,50 +221,70 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		}
 	}
 	if (process.Active && process.State == "OK") {
-		rlog.Notify(project.Name + " was sucessfully deployed!", "done")
+		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
 	} else {
-		rlog.Notify(project.Name + " was not sucessfully deployed!", "err")
+		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
 	}
 
 	processes = append(processes, &process)
 }
 
 func startProject(project *project, env string) {
-	var oldprocess *process
+	var oldprocesses []*process
 	for _, prc := range processes {
 		if (prc.Project.Name == project.Name && !prc.Ghost) {
-			oldprocess = prc
+			oldprocesses = append(oldprocesses, prc)
 			break
 		}
 	}
 
-	rlog.Println("Downloading project " + project.Name)
-	dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
-	os.Mkdir(dir, 0600)
-	
-	cmd := exec.Command("git", "clone", project.Src)
-	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
-		rlog.Fatal(err)
-	}
+	var deployments = project.Deployments
+	deployments = append(deployments, deployment{
+		Type: "prod",
+	})
 
-	content, err := os.ReadDir(dir)
-	if (err != nil) {
-		rlog.Fatal(err)
-	}
+	for _, deployment := range deployments {
+		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + deployment.Branch + ")")
 
-	projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json"
-	if _, err := os.Stat(projectConfig); err != nil {
-		rlog.Fatal("No ray.config.json file found in project.")
-	}
-	rm := func() {
-		if (oldprocess != nil) {
-			oldprocess.remove()
-		} else {
+		dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
+		os.Mkdir(dir, 0600)
+
+		_cmd := []string{"clone", project.Src}
+		if (deployment.Type != "prod") {
+			_cmd = append(_cmd, "-b")
+			_cmd = append(_cmd, deployment.Branch)
 		}
+		
+		cmd := exec.Command("git", _cmd...)
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			rlog.Println(cmd.Args)
+			rlog.Fatal("git cloning error: " + err.Error())
+		}
+	
+		content, err := os.ReadDir(dir)
+		if (err != nil) {
+			rlog.Fatal(err)
+		}
+	
+		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json"
+		if _, err := os.Stat(projectConfig); err != nil {
+			rlog.Fatal("No ray.config.json file found in project.")
+		}
+		rm := func() {
+			for _, proc := range oldprocesses {
+				if (!proc.Ghost) {
+					proc.remove()
+				}
+			}
+		}
+	
+		branch := deployment.Branch
+		if branch == "" {
+			branch = "prod"
+		}
+		go launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch)
 	}
-
-	go launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm)
 }
 
 var rconf rayconfig
