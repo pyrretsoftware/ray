@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -205,13 +204,8 @@ func startProxy() {
 			w.Header().Add("Content-Type", "text/html")
 			w.Header().Add("Set-Cookie", "ray-channel=prod")
 
-			content, werr := os.ReadFile("./pages/error.html")
-			if werr != nil {
-				rlog.Notify("Could not server router error page.", "warn")
-			}
-			rlog.Notify(err.Error(), "err")
-			content = []byte(strings.ReplaceAll(strings.ReplaceAll(string(content), "${ErrorCode}", errorCodes[err.Error()]), "${RayVer}", _version))
-			w.Write(content)
+			content := errorPage
+			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorCodes[err.Error()]), "${RayVer}", _version)))
 		},
 	}}
 	go startHttpServer(srv)

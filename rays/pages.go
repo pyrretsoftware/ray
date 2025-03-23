@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+package main
+
+var errorPage = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -56,4 +58,4 @@
     </div>
     <span class="rayver">ray ${RayVer}</span>
 </body>
-</html>
+</html>`
