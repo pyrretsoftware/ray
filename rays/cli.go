@@ -14,6 +14,7 @@ type cliCommand struct {
 	Args    []string
 }
 
+
 func daemonHandleCommand(command cliCommand) []byte {
 	switch command.Command {
 	case "LISTPROCESS":

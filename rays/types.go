@@ -18,10 +18,15 @@ type raydata struct {
 	RayEnv string
 }
 
+type tlsConfig struct {
+	Provider string //enum, possile vals are "letsencrypt" and "custom". 
+}
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	EnvLocation string
+	TLS tlsConfig
 }
 
 type pipelineStep struct {

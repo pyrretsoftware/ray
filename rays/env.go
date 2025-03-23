@@ -84,7 +84,8 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	for stepIndex, step := range config.Pipeline {
 		if (step.Tool == "rayserve" && step.Type == "deploy") {
 			(*swapfunction)()
-			staticServe(dir, process.Port, &process)
+			staticServer(dir, process.Port, &process)
+
 			continue
 		} else if (step.Tool == "rayserve") {
 			rlog.Notify("ray.config.json error: rayserve is a built in ray tool that requires type deploy.", "err")
@@ -166,7 +167,6 @@ func startProject(project *project, env string) {
 	for _, prc := range processes {
 		if (prc.Project.Name == project.Name && !prc.Ghost) {
 			oldprocesses = append(oldprocesses, prc)
-			break
 		}
 	}
 
@@ -219,7 +219,7 @@ func startProject(project *project, env string) {
 		if branch == "" {
 			branch = "prod"
 		}
-		go launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch)
+		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch)
 	}
 }
 

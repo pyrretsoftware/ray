@@ -60,7 +60,7 @@ func main() {
 			rlog.Println("Reloading processes")
 			data := cliSendCommand("RELOAD", nil)
 			if (string(data) == "success\n") {
-				rlog.Println("Reloaded successfully.")
+				rlog.Notify("Reloaded successfully.", "done")
 				os.Exit(0)
 			} else {
 				rlog.Println("Rays did not indicate success in reloading processes, please check the status of the server.")

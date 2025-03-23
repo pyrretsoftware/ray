@@ -56,7 +56,7 @@ type customLogWriter struct {
 }
 
 func (w *customLogWriter) Write(p []byte) (n int, err error) {
-	if strings.Contains(string(p), "http: proxy error: context canceled") {
+	if strings.Contains(string(p), "context canceled") {
 		return len(p), nil
 	}
 	return w.out.Write(p)

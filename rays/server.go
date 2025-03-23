@@ -1,30 +1,37 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 )
 
-func staticServe(dir string, port int, process *process) {
+func serveStaticServer(srv *http.Server, process *process) {
+	err := srv.ListenAndServe()
+	
+	if err != nil {
+		if (process.State != "drop") {
+			rlog.Println("not dropped")
+			process.Active = false
+			process.State = "Exited, " + err.Error()
+			rlog.Notify(err, "err")
+		}
+	}
+}
+
+func staticServer(dir string, port int, process *process) *http.Server {
 	mux := http.NewServeMux()
 	fs := http.FileServer(http.Dir(dir))
 	mux.Handle("/", fs)
 
-	srv := &http.Server{Addr: strconv.Itoa(port), Handler: mux}
+	srv := &http.Server{Addr: ":" + strconv.Itoa(port), Handler: mux}
 	process.remove = func() {
 		process.Active = false
-		process.State = "stopped"
-		srv.Close()
+		process.State = "drop"
 		process.Ghost = true
+		rlog.Println("Closing server...")
+		srv.Close()
 	}
-	err := srv.ListenAndServe()
+	go serveStaticServer(srv, process)
 
-	fmt.Println("Now serving project on http://localhost:" + strconv.Itoa(port))
-	if err != nil {
-		process.Active = false
-		process.State = "Exited, " + err.Error()
-		log.Println(err)
-	}
+	return srv
 }
