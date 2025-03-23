@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type routerContextKey string
@@ -20,6 +21,15 @@ const (
 
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "Host not found",
+}
+
+func intParse(val string) int64 {
+	n, err := strconv.ParseInt(val, 10, 0)
+	if (err != nil) {
+		return 0 //notice in case of a parse error a renrollment will always be trigged, which is probably a good thing since the cookie would have to be incorrectly formatted for us to get here
+	} else {
+		return n
+	}
 }
 
 func startProxy() {
@@ -36,8 +46,10 @@ func startProxy() {
 			}
 
 			_ch, err := r.In.Cookie("ray-channel")
+			_enrolled, enerr := r.In.Cookie("ray-enrolled-at")
+
 			chnl := ""
-			if err != nil {
+			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) {
 				var rand = rand.Float64() * 100
 				dplymnt := requestProcess.Project.Deployments
 
@@ -82,15 +94,17 @@ func startProxy() {
 				r.Out = r.Out.WithContext(ctx)
 			} else {
 				for _, dpl := range requestProcess.Project.Deployments {
-					if dpl.Branch == chnl {
+					if dpl.Branch == _ch.Value {
 						chnl = _ch.Value
 						break
 					}
 				}
 
 				if chnl == "" {
-					warnctx := context.WithValue(r.Out.Context(), rayWarnKey, "Specified channel not found, now enrolled on prod.")
-					r.Out = r.Out.WithContext(warnctx)
+					if (_ch.Value != "prod") {
+						warnctx := context.WithValue(r.Out.Context(), rayWarnKey, "Specified channel not found, now enrolled on prod.")
+						r.Out = r.Out.WithContext(warnctx)
+					}
 					chnl = "prod"
 				}
 			}
@@ -110,8 +124,20 @@ func startProxy() {
 			r.Header.Add("x-handled-by", "ray")
 
 			if chnl, ok := r.Request.Context().Value(rayChannelKey).(string); ok {
-				r.Header.Add("Set-Cookie", "ray-channel="+chnl)
+				r.Header.Add("Set-Cookie", "ray-channel=" + chnl + ";Max-Age=31536000") //expires after 1 year
+				r.Header.Add("Set-Cookie", "ray-enrolled-at=" + strconv.FormatInt(time.Now().Unix(), 10) + ";Max-Age=31536000")
 			}
+			/*
+			if warn, ok := r.Request.Context().Value(rayWarnKey).(string); ok {
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					rlog.Fatal(err)
+				}
+				
+				body = append(body, []byte(warn)...)
+				r.Body = io.NopCloser(bytes.NewReader(body))
+			}*/
+
 
 			return nil
 		},

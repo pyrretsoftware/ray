@@ -13,76 +13,8 @@ import (
 	"strings"
 	"time"
 )
-type deployment struct {
-	Branch string
-	Type string
-	Enrollment int
-}
-
-type project struct {
-	Src string
-	Name string
-	EnvVars map[string]string
-	Domain string
-	Deployments []deployment
-}
-
-type raydata struct {
-	RayEnv string
-}
-
-type rayconfig struct {
-	Projects []project
-	EnvLocation string
-}
-
-type pipelineStep struct {
-	Tool string
-	Command string
-	Type string //enum, possible vals are "build" and "deploy"
-}
-
-type projectConfig struct {
-	Pipeline []pipelineStep
-}
-
-type process struct {
-	Project *project
-	Env string
-	Ghost bool
-	Port int
-	Processes []int
-	Active bool
-	State string
-	remove func()
-	Branch string
-}
 var exiting = false
 var processes []*process
-func readConfig() rayconfig {
-	_config, err := os.ReadFile("./rayconfig.json")
-	if (err != nil) {
-		rlog.Fatal(err)
-	}
-
-	var config rayconfig
-	if err := json.Unmarshal(_config, &config); err != nil {
-		rlog.Fatal(err)
-	}
-	if (config.EnvLocation == "") {
-		rlog.Println("No enviroument picked, letting OS choose...")
-		config.EnvLocation = os.TempDir()
-	}
-
-	var nameList []string
-	for _, project  := range config.Projects {
-		if (slices.Contains(nameList, project.Name)) {
-			rlog.Fatal("Fatal rayconfig error: two projects cannot have the same name.")
-		}
-	}
-
-	return config
-}
 
 func pickPort() int {
 	return rand.IntN(16383) + 49152
@@ -244,7 +176,11 @@ func startProject(project *project, env string) {
 	})
 
 	for _, deployment := range deployments {
-		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + deployment.Branch + ")")
+		var _dpl = deployment.Branch
+		if (_dpl == "") {
+			_dpl = "prod"
+		}
+		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + _dpl + ")")
 
 		dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
 		os.Mkdir(dir, 0600)
@@ -287,10 +223,11 @@ func startProject(project *project, env string) {
 	}
 }
 
-var rconf rayconfig
+var rconf *rayconfig
 var rdata raydata
 func SetupEnv() {
-	rconf = readConfig()
+	_cnf := readConfig()
+	rconf = &_cnf
 	
 	rdata.RayEnv = rconf.EnvLocation + "/ray-env-" + strconv.Itoa(rand.IntN(10000000))
 	os.Mkdir(rdata.RayEnv, 0600)

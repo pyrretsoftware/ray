@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 type cliCommand struct {
@@ -27,6 +28,17 @@ func daemonHandleCommand(command cliCommand) []byte {
 			startProject(&project, rdata.RayEnv)
 		}
 		return []byte("success\n")
+	case "FORCE_RE":
+		rconf.ForcedRenrollment = time.Now().Unix()
+		err := applyChanges(*rconf)
+
+		var data string
+		if (err == nil) {
+			data = ""
+		} else {
+			data = err.Error()
+		}
+		return []byte(data + "\n")
 	default:
 		return []byte("\n")
 	}
