@@ -63,12 +63,15 @@ var errorPage = `<!DOCTYPE html>
 var systemdService string = `[Unit]
 Description=ray server (rays)
 After=network.target
+
 [Service]
 User=${User}
 Restart=always
 ExecStart=${BinaryPath} --daemon
 ExecReload=${BinaryPath} reload
 ExecStop=${BinaryPath} stop
+
+[Install]
 WantedBy=multi-user.target`
 
 var serviceCommand string = `create rays binpath= ${BinaryPath} start= auto`
