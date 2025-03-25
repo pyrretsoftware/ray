@@ -32,6 +32,7 @@ func formatProcessList(process process) string {
 	return content
 }
 
+
 func main() {
 	if (len(os.Args) == 1) {
 		rlog.Fatal("No arguments passed!")
@@ -74,6 +75,14 @@ func main() {
 			} else {
 				rlog.Fatal("Failed applying changes to config.")
 			}
+		case "stop":
+			rlog.Println("Exiting...")
+			data := cliSendCommand("FORCE_RE", nil)
+			if (string(data) == "\n") {
+				rlog.Notify("Exited successfully.", "done")
+			}
+		case "setup":
+			install()
 		}
 	}
 }

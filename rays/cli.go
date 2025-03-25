@@ -25,6 +25,8 @@ func daemonHandleCommand(command cliCommand) []byte {
 
 		return append(json, []byte("\n")[0])
 	case "RELOAD":
+		config := readConfig()
+		rconf = &config
 		for _, project := range rconf.Projects {
 			startProject(&project, rdata.RayEnv)
 		}
@@ -40,6 +42,9 @@ func daemonHandleCommand(command cliCommand) []byte {
 			data = err.Error()
 		}
 		return []byte(data + "\n")
+	case "STOP":
+		os.Exit(0)
+		return []byte("\n")
 	default:
 		return []byte("\n")
 	}

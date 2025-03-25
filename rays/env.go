@@ -229,6 +229,8 @@ func SetupEnv() {
 	_cnf := readConfig()
 	rconf = &_cnf
 	
+	os.MkdirAll(rconf.EnvLocation, 0600)
+	os.Mkdir("./ray-certs", 0600)
 	rdata.RayEnv = rconf.EnvLocation + "/ray-env-" + strconv.Itoa(rand.IntN(10000000))
 	os.Mkdir(rdata.RayEnv, 0600)
 	go func() {
