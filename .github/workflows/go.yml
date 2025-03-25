@@ -41,7 +41,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           cd $PROJECT_ROOT
-          OUTPUT_NAME="myapp-${{ matrix.goos }}-${{ matrix.goarch }}"
+          OUTPUT_NAME="rays-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "$GOOS" = "windows" ]; then
             OUTPUT_NAME+=".exe"
           fi
