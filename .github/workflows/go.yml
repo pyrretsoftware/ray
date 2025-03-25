@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  PROJECT_ROOT: ./rays
+
 jobs:
   build:
     name: Build for Multiple Platforms
@@ -37,13 +40,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
+          cd $PROJECT_ROOT
           OUTPUT_NAME="myapp-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "$GOOS" = "windows" ]; then
             OUTPUT_NAME+=".exe"
           fi
-          go build -o $OUTPUT_NAME .
-          mkdir -p dist
-          mv $OUTPUT_NAME dist/
+          go build -o ../dist/$OUTPUT_NAME .
+          cd ..
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
