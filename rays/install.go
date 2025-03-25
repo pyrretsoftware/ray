@@ -85,9 +85,9 @@ func install() {
 		return
 	}
 
-	if _, err := os.Stat("./rayconfig.json"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(dotslash + "/rayconfig.json"); errors.Is(err, os.ErrNotExist) {
 		rlog.Notify("Created default config.", "done")
-		os.WriteFile("./rayconfig.json", []byte(defaultConfig), 0600)
+		os.WriteFile(dotslash + "/rayconfig.json", []byte(defaultConfig), 0600)
 	} else {
 		rlog.Println("Config already exists, using existing one.")
 	}

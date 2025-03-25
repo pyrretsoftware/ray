@@ -34,6 +34,7 @@ func formatProcessList(process process) string {
 
 
 func main() {
+	assignDotSlash()
 	if (len(os.Args) == 1) {
 		rlog.Fatal("No arguments passed!")
 	}

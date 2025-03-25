@@ -13,7 +13,7 @@ func applyChanges(_config rayconfig) error {
 		return err
 	}
 
-	err2 := os.WriteFile("./rayconfig.json", config, 0666)
+	err2 := os.WriteFile(dotslash + "/rayconfig.json", config, 0666)
 	if err2 != nil {
 		rlog.Notify("Cant apply config changes: " + err2.Error(), "err")
 		return err
@@ -22,7 +22,7 @@ func applyChanges(_config rayconfig) error {
 }
 
 func readConfig() rayconfig {
-	_config, err := os.ReadFile("./rayconfig.json")
+	_config, err := os.ReadFile(dotslash + "/rayconfig.json")
 	if err != nil {
 		rlog.Fatal(err)
 	}
@@ -31,11 +31,7 @@ func readConfig() rayconfig {
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
-	if config.EnvLocation == "" {
-		rlog.Println("No enviroument picked, letting OS choose...")
-		config.EnvLocation = os.TempDir()
-	}
-
+	
 	var nameList []string
 	for _, project := range config.Projects {
 		if slices.Contains(nameList, project.Name) {

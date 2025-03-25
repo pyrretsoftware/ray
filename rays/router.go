@@ -42,8 +42,8 @@ func startHttpServer(srv *http.Server) {
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
-	certFile := "./ray-certs/server.crt"
-	keyFile := "./ray-certs/server.key"
+	certFile := dotslash + "/ray-certs/server.crt"
+	keyFile := dotslash + "/ray-certs/server.key"
 	if (rconf.TLS.Provider == "letsencrypt") {
 		srv.TLSConfig = letsEncryptConfig(hosts)
 		certFile = ""

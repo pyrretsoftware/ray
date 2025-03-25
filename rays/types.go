@@ -25,7 +25,6 @@ type tlsConfig struct {
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
-	EnvLocation string
 	TLS tlsConfig
 }
 

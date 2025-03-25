@@ -51,7 +51,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 }
 
 func cliSendCommand(command string, args []string) []byte {
-	socketPath := "./clisocket.sock"
+	socketPath := dotslash + "/clisocket.sock"
 
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
@@ -95,7 +95,7 @@ func cliSendCommand(command string, args []string) []byte {
 }
 
 func daemonListen() {
-	socketPath := "./clisocket.sock"
+	socketPath := dotslash + "/clisocket.sock"
 
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
 		log.Println("Warning: could not remove existing socket file:", err)

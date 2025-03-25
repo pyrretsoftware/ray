@@ -80,6 +80,5 @@ var defaultConfig string = `{
             "Src": "https://github.com/pyrretsoftwarelabs/ray-demo",
             "Domain": "localhost"
         }
-    ],
-    "EnvLocation": "./projects"
+    ]
 }`
