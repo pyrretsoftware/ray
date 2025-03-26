@@ -62,7 +62,35 @@ func waitForPortOpen(process *process) {
 	}
 }
 
-func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string) {
+func startUpdateCheck() {
+	for {
+		time.Sleep(time.Minute)
+		updateChecker()
+	}
+}
+
+func updateChecker() {//we wont print anything if no updates are found, as to not fill up log files and such
+	for _, project := range rconf.Projects {
+		branches := getBranches(project.Src)
+		doUpdate := false
+
+		for _, deployment := range project.Deployments {
+			if (branches == nil || branches[deployment.Branch] == "") {continue}
+
+			process := getProcessFromBranch(deployment.Branch)
+			if (process == nil) {continue}
+			if (branches[deployment.Branch] != process.Hash) {
+				doUpdate = true
+			}
+		}
+		if (doUpdate) {
+			rlog.Println("Performing update on " + project.Name)
+			startProject(&project, rdata.RayEnv)
+		}
+	}
+}
+
+func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
 	if (err != nil) {
@@ -72,6 +100,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	var config projectConfig
 	var process process
 	process.Branch = branch
+	process.Hash = branchHash
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
@@ -175,6 +204,7 @@ func startProject(project *project, env string) {
 		Type: "prod",
 	})
 
+	branchHashes := getBranches(project.Src)
 	for _, deployment := range deployments {
 		var _dpl = deployment.Branch
 		if (_dpl == "") {
@@ -219,7 +249,12 @@ func startProject(project *project, env string) {
 		if branch == "" {
 			branch = "prod"
 		}
-		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch)
+
+		branchHash := ""
+		if (branchHashes != nil && branchHashes[branch] != "") {
+			branchHash = branchHashes[branch]
+		}
+		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash)
 	}
 }
 
@@ -248,4 +283,5 @@ func SetupEnv() {
 	for _, project := range rconf.Projects {
 		startProject(&project, rdata.RayEnv)
 	}
+	go startUpdateCheck()
 }

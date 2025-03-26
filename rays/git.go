@@ -1,0 +1,44 @@
+package main
+
+import (
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+func getBranches(repo string) map[string]string { //returns map with branch:hash
+	resp, err := http.Get(repo + "/info/refs?service=git-upload-pack") //see https://git-scm.com/docs/http-protocol
+	if (err != nil) {
+		rlog.Notify("Could not fetch repository information for " + repo + ".", "warn")
+		return nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if (err != nil) {
+		rlog.Notify("Failed reading response body when fetching repo information for " + repo + ".", "warn")
+		return nil
+	}
+	if resp.StatusCode > 299 {
+		rlog.Notify("Request failed with status code " + strconv.Itoa(resp.StatusCode) + " when fetching repo information for " + repo + ".", "warn")
+		return nil
+	}
+
+	branches := make(map[string]string)
+	for _, line := range strings.Split(string(body), "\n") {
+		if (strings.Contains(line, "001e#") || strings.Contains(line, "0000")) {continue}
+
+		data := strings.Split(strings.Split(line, "\000")[0], " ")
+		if (!strings.Contains(data[1], "refs/heads") || data[1] == "HEAD") {continue}
+
+		if (data[1] == "HEAD") {
+			data[1] = "prod"
+		}
+		data[1] = strings.ReplaceAll(data[1], "refs/heads/", "")
+
+		branches[data[1]] = data[0]
+	}
+	return branches
+}
+

@@ -14,3 +14,12 @@ func assignDotSlash() {
 
 	dotslash = path.Dir(exc)
 }
+
+func getProcessFromBranch(branch string) *process {
+	for _, process := range processes {
+		if (process.Branch == branch && process.Ghost == false && process.State != "drop") {
+			return process
+		}
+	}
+	return nil
+}

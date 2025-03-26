@@ -48,4 +48,5 @@ type process struct {
 	State string
 	remove func()
 	Branch string
+	Hash string
 }
