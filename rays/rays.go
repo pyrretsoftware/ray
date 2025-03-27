@@ -82,6 +82,19 @@ func main() {
 			if (string(data) == "\n") {
 				rlog.Notify("Exited successfully.", "done")
 			}
+		case "dev-auth":
+			rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
+			
+			var response auth
+			err := json.Unmarshal(cliSendCommand("GETDEVAUTH", nil), &response)
+			if (err != nil) {
+				log.Fatal(err)
+			}
+
+			rlog.Notify("Success!", "done")
+			rlog.Println("Username: " + response.Username)
+			rlog.Println("Password: " + response.Password)
+
 		case "setup":
 			install()
 		}

@@ -23,7 +23,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 			log.Println(err)
 		}
 
-		return append(json, []byte("\n")[0])
+		return append(json, byte('\n'))
 	case "RELOAD":
 		config := readConfig()
 		rconf = &config
@@ -45,6 +45,14 @@ func daemonHandleCommand(command cliCommand) []byte {
 	case "STOP":
 		os.Exit(0)
 		return []byte("\n")
+	case "GETDEVAUTH":
+		generateAuth()
+		json, err := json.Marshal(devAuth)
+		if err != nil {
+			log.Println(err)
+		}
+
+		return append(json, byte('\n'))
 	default:
 		return []byte("\n")
 	}

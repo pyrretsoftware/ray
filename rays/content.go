@@ -6,13 +6,12 @@ var errorPage = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Error</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3.3.0/build/web/hack.css">
 </head>
 <style>
     body {
         margin: 0;
         background-color: black;
-        font-family: 'Hack', sans-serif;
+        font-family: monospace;
     }
     .center {
         display: flex;
@@ -74,9 +73,10 @@ ExecStop=${BinaryPath} stop
 [Install]
 WantedBy=multi-user.target`
 
-var serviceCommand string = `create rays binpath= ${BinaryPath} start= auto`
+//var serviceCommand string = `create rays binpath= ${BinaryPath} start= auto`
 
 var defaultConfig string = `{
+    "EnableRayUtil" : true,
     "Projects": [
         {
             "Name": "ray demo",

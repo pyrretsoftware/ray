@@ -17,11 +17,14 @@ type routerContextKey string
 
 const (
 	rayChannelKey routerContextKey = "ray-channel"
-	rayWarnKey    routerContextKey = "ray-warn"
+	raySpecialBehaviour routerContextKey = "ray-behaviour"
+	rayUtilMessage routerContextKey = "rayutil-message"
+	rayUtilIcon routerContextKey = "rayutil-icon"
 )
 
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "Host not found",
+	`AuthError` : "Incorrect credentials",
 }
 
 func intParse(val string) int64 {
@@ -79,6 +82,7 @@ func startProxy() {
 			_enrolled, enerr := r.In.Cookie("ray-enrolled-at")
 
 			chnl := ""
+			requiresAuth := false
 			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) {
 				var rand = rand.Float64() * 100
 					dplymnt := requestProcess.Project.Deployments
@@ -125,6 +129,9 @@ func startProxy() {
 			} else {
 				for _, dpl := range requestProcess.Project.Deployments {
 					if dpl.Branch == _ch.Value {
+						if (dpl.Type == "dev") {
+							requiresAuth = true
+						}
 						chnl = _ch.Value
 						break
 					}
@@ -132,13 +139,31 @@ func startProxy() {
 
 				if chnl == "" {
 					if (_ch.Value != "prod") {
-						warnctx := context.WithValue(r.Out.Context(), rayWarnKey, "Specified channel not found, now enrolled on prod.")
+						warnctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Specified channel not found, now enrolled on prod.")
+						warnctx = context.WithValue(warnctx, rayUtilIcon, "warn")
 						r.Out = r.Out.WithContext(warnctx)
 					}
 					chnl = "prod"
 				}
 			}
 
+			if (requiresAuth) {
+				user, pass, ok := r.In.BasicAuth()
+
+				if (!ok || user == "" || pass == "") {
+					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RequestAuth")
+					r.Out = r.Out.WithContext(behaviourctx)
+					return
+				} else if (user != devAuth.Username || pass != devAuth.Password || !devAuth.Valid) {
+					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "AuthError")
+					r.Out = r.Out.WithContext(behaviourctx)
+					return
+				} else {
+					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;" + chnl + "&#39;")
+					infoctx = context.WithValue(infoctx, rayUtilIcon, "login")
+					r.Out = r.Out.WithContext(infoctx)
+				}
+			}
 			existsAsDropped := false
 			hostFound := false
 			tryRoute := func() {
@@ -176,36 +201,57 @@ func startProxy() {
 				r.Header.Add("Set-Cookie", "ray-enrolled-at=" + strconv.FormatInt(time.Now().Unix(), 10) + ";Max-Age=31536000")
 			}
 			
-			if warn, ok := r.Request.Context().Value(rayWarnKey).(string); ok {
-				if (strings.Contains(r.Header.Get("Content-Type"), "text/html")) {
-					body, err := io.ReadAll(r.Body)
-					if err != nil {
-						rlog.Fatal(err)
-					}
-					
-					bodyStr := string(body)
-					if idx := strings.LastIndex(bodyStr, "</head>"); idx != -1 {
-						bodyStr = bodyStr[:idx] + string(getWarner(warn)) + bodyStr[idx:]
-					} else {
-						bodyStr = bodyStr + getWarner(warn)
-					}
-	
-					body = []byte(bodyStr)
-					r.Body = io.NopCloser(bytes.NewReader(body))
-					r.ContentLength = int64(len(body))
-					r.Header.Set("Content-Length", strconv.Itoa(len(body)))
+			if (strings.Contains(r.Header.Get("Content-Type"), "text/html")) {
+				icon, ok := r.Request.Context().Value(rayUtilIcon).(string)
+				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
+
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					rlog.Fatal(err)
 				}
+				
+				bodyStr := string(body)
+				rayutl := ""
+				if (ok && ok2) {
+					rayutl = getRayUtilMessage(message, icon)
+				} else {
+					rayutl = getRayUtil()
+				}
+
+				if idx := strings.LastIndex(bodyStr, "</head>"); idx != -1 {
+					bodyStr = bodyStr[:idx] + rayutl + bodyStr[idx:]
+				} else {
+					bodyStr = bodyStr + rayutl
+				}
+
+				body = []byte(bodyStr)
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				r.ContentLength = int64(len(body))
+				r.Header.Set("Content-Length", strconv.Itoa(len(body)))
 			}
 
 
 			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			errorCode := err.Error()
+			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
+				if (beh == "RequestAuth") {
+					w.Header().Add("WWW-Authenticate", `Basic realm="development channel", charset="UTF-8`)
+					w.WriteHeader(401)
+					return
+				} else if (beh == "AuthError") {
+					errorCode = "AuthError"
+				}
+			}
+
 			w.Header().Add("Content-Type", "text/html")
 			w.Header().Add("Set-Cookie", "ray-channel=prod")
-
+			
 			content := errorPage
-			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorCodes[err.Error()]), "${RayVer}", _version)))
+			
+			w.WriteHeader(400)
+			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorCodes[errorCode]), "${RayVer}", _version)))
 		},
 	}}
 	go startHttpServer(srv)

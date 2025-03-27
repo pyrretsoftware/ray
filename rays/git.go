@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strconv"
@@ -26,11 +27,13 @@ func getBranches(repo string) map[string]string { //returns map with branch:hash
 	}
 
 	branches := make(map[string]string)
-	for _, line := range strings.Split(string(body), "\n") {
-		if (strings.Contains(line, "001e#") || strings.Contains(line, "0000")) {continue}
 
-		data := strings.Split(strings.Split(line, "\000")[0], " ")
-		if (!strings.Contains(data[1], "refs/heads") || data[1] == "HEAD") {continue}
+	body = bytes.ReplaceAll(body, []byte("\000"), []byte("¶"))
+	for _, line := range strings.Split(string(body), "\n") {
+		if (strings.Contains(line, "001e# ") || line == "0000") {continue}
+		
+		data := strings.Split(strings.Split(line, "¶")[0], " ")
+		if (!strings.Contains(data[1], "refs/heads") && data[1] != "HEAD") {continue}
 
 		if (data[1] == "HEAD") {
 			data[1] = "prod"

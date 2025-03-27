@@ -14,6 +14,12 @@ type project struct {
 	Deployments []deployment
 }
 
+type auth struct {
+	Username string
+	Password string
+	Valid bool
+}
+
 type raydata struct {
 	RayEnv string
 }
@@ -26,6 +32,7 @@ type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	TLS tlsConfig
+	EnableRayUtil bool
 }
 
 type pipelineStep struct {

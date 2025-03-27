@@ -74,11 +74,19 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 		branches := getBranches(project.Src)
 		doUpdate := false
 
-		for _, deployment := range project.Deployments {
-			if (branches == nil || branches[deployment.Branch] == "") {continue}
+		dplymnt := project.Deployments
+		dplymnt = append(dplymnt, deployment{
+			Branch: "prod",
+		})
+
+		for _, deployment := range dplymnt {
+			if (branches == nil || branches[deployment.Branch] == "") {
+				continue
+			}
 
 			process := getProcessFromBranch(deployment.Branch)
 			if (process == nil) {continue}
+
 			if (branches[deployment.Branch] != process.Hash) {
 				doUpdate = true
 			}
