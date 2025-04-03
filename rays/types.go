@@ -15,8 +15,7 @@ type project struct {
 }
 
 type auth struct {
-	Username string
-	Password string
+	Token string
 	Valid bool
 }
 

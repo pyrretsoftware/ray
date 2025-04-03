@@ -7,33 +7,29 @@ import (
 )
 
 var devAuth *auth = &auth{
-	Password: "",
-	Username: "",
+	Token: "",
 	Valid: false,
 }
 
 func generateAuth() {
 	_pass := make([]byte, 24)
-	_user := make([]byte, 8)
 	
 	_, err := rand.Read(_pass)
-	_, err2 := rand.Read(_user)
-	if err != nil || err2 != nil {
+	if err != nil {
 		rlog.Notify("Could not generate authentication.", "warn")
 		return
 	}
 	
 	devAuth = &auth{
-		Password: hex.EncodeToString(_pass),
-		Username: "dev-" + hex.EncodeToString(_user),
+		Token: hex.EncodeToString(_pass),
 		Valid: true,
 	}
-	go invalidateAuth(devAuth.Username)
+	go invalidateAuth(string(_pass))
 }
 
-func invalidateAuth(user string) {
+func invalidateAuth(token string) {
 	time.Sleep(10 * time.Minute)
-	if (devAuth.Username == user) {
+	if (devAuth.Token == token) {
 		devAuth.Valid = false
 	}
 }

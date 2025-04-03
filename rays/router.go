@@ -148,13 +148,13 @@ func startProxy() {
 			}
 
 			if (requiresAuth) {
-				user, pass, ok := r.In.BasicAuth()
+				token, err := r.In.Cookie("ray-auth")
 
-				if (!ok || user == "" || pass == "") {
+				if (err != nil || token.Valid() != nil) {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RequestAuth")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
-				} else if (user != devAuth.Username || pass != devAuth.Password || !devAuth.Valid) {
+				} else if (token.Value != devAuth.Token || !devAuth.Valid) {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "AuthError")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
@@ -173,7 +173,7 @@ func startProxy() {
 							existsAsDropped = true
 							continue
 						}
-	
+
 						url, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(process.Port))
 						if err != nil {
 							return
@@ -200,7 +200,7 @@ func startProxy() {
 				r.Header.Add("Set-Cookie", "ray-channel=" + chnl + ";Max-Age=31536000") //expires after 1 year
 				r.Header.Add("Set-Cookie", "ray-enrolled-at=" + strconv.FormatInt(time.Now().Unix(), 10) + ";Max-Age=31536000")
 			}
-			
+
 			if (strings.Contains(r.Header.Get("Content-Type"), "text/html")) {
 				icon, ok := r.Request.Context().Value(rayUtilIcon).(string)
 				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
@@ -230,15 +230,14 @@ func startProxy() {
 				r.Header.Set("Content-Length", strconv.Itoa(len(body)))
 			}
 
-
 			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			errorCode := err.Error()
 			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
 				if (beh == "RequestAuth") {
-					w.Header().Add("WWW-Authenticate", `Basic realm="development channel", charset="UTF-8`)
 					w.WriteHeader(401)
+					w.Write([]byte(loginPage))
 					return
 				} else if (beh == "AuthError") {
 					errorCode = "AuthError"

@@ -92,9 +92,7 @@ func main() {
 			}
 
 			rlog.Notify("Success!", "done")
-			rlog.Println("Username: " + response.Username)
-			rlog.Println("Password: " + response.Password)
-
+			rlog.Println("Token: " + response.Token)
 		case "setup":
 			install()
 		}
