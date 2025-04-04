@@ -86,26 +86,9 @@ func startProxy() {
 			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) {
 				var rand = rand.Float64() * 100
 					dplymnt := requestProcess.Project.Deployments
-
-					var enrollments = 0
-					for _, deployment := range dplymnt {
-						if deployment.Enrollment < 0 && deployment.Type == "test" {
-							rlog.Fatal("One of the specifed test deployments has a negative or no enrollment rate. Please specify one for all test deployments.")
-						}
-						if deployment.Enrollment > 0 && deployment.Type == "dev" {
-							rlog.Notify("One of the development deployments have an enrollment rate specified, which is not allowed on development deployments. Ignoring.", "warn")
-						}
-						if deployment.Type == "test" {
-							enrollments += deployment.Enrollment
-						}
-					}
-	
-					if enrollments > 100 {
-						rlog.Fatal("Adding up the enrollment rates from all test deployments gives a value above 100. Please make sure it adds up to 100 or below.")
-					}
 	
 					for index, deployment := range dplymnt {
-						if deployment.Enrollment == -1 {
+						if deployment.Type != "test" {
 							continue
 						}
 	

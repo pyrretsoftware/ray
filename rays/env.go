@@ -200,6 +200,8 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 }
 
 func startProject(project *project, env string) {
+	analyzeDeployments(project.Deployments)
+
 	var oldprocesses []*process
 	for _, prc := range processes {
 		if (prc.Project.Name == project.Name && !prc.Ghost) {
