@@ -6,13 +6,13 @@
 <p align="center">
     <i>the self hosted tool for managing your web apps</i>
     <br>
-    <a href="https://rdocs.axell.me/">Installation guide</a>
+    <a href="https://rdocs.axell.me/guides/install">Installation guide</a>
     <span> | </span>
     <a href="https://rdocs.axell.me/">Docs</a>
     <span> | </span>
     <a href="https://github.com/pyrretsoftware/ray/releases">Latest release</a>
     <span> | </span>
-    <a href="https://github.com/pyrretsoftware/ray/actions">Latest builds</a>
+    <a href="https://github.com/pyrretsoftware/ray/actions">Latest unstable builds</a>
 </p>
 
 # what is ray? 
