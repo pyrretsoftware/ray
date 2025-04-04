@@ -42,8 +42,9 @@ func main() {
 	if (os.Args[1] == "--daemon") {
 		rlog.Println("Ray server daemon launched.")
 		rlog.Println("Setting up ray enviroument...")
-		SetupEnv()
+		
 		go daemonListen()
+		SetupEnv()
 		startProxy()
 		select {}
 	} else {
@@ -78,10 +79,12 @@ func main() {
 			}
 		case "stop":
 			rlog.Println("Exiting...")
-			data := cliSendCommand("FORCE_RE", nil)
+			data := cliSendCommand("STOP", nil)
+
 			if (string(data) == "\n") {
-				rlog.Notify("Exited successfully.", "done")
+				rlog.Notify("Exited!", "done")
 			}
+			os.Exit(0)
 		case "dev-auth":
 			rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
 			

@@ -43,6 +43,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 		}
 		return []byte(data + "\n")
 	case "STOP":
+		rlog.Println("Exiting...")
 		os.Exit(0)
 		return []byte("\n")
 	case "GETDEVAUTH":
@@ -76,13 +77,14 @@ func cliSendCommand(command string, args []string) []byte {
 	if err != nil {
 		log.Fatal(err)
 	}
-	jsonData = append(jsonData, []byte("\n")[0])
+	jsonData = append(jsonData, byte('\n'))
 
 	_, err = conn.Write(jsonData)
 	if err != nil {
 		log.Fatal("Failed to send command: " + err.Error())
 	}
 
+	if (command == "STOP") {return []byte("\n")}
 	buffer := make([]byte, 4096)
 	_command := make([]byte, 0)
 	for {

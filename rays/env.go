@@ -287,6 +287,7 @@ func SetupEnv() {
 		rlog.Println("Cleaning up enviroument.")
 		exiting = true
 		os.RemoveAll(rdata.RayEnv)
+		os.Remove(dotslash + "/clisocket.sock")
 		os.Exit(0)
 	}()	
 
