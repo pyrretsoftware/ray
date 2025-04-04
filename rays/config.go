@@ -41,3 +41,14 @@ func readConfig() rayconfig {
 
 	return config
 }
+
+var defaultConfig string = `{
+    "EnableRayUtil" : true,
+    "Projects": [
+        {
+            "Name": "ray demo",
+            "Src": "https://github.com/pyrretsoftwarelabs/ray-demo",
+            "Domain": "localhost"
+        }
+    ]
+}`

@@ -96,3 +96,17 @@ func install() {
 	rlog.Notify("Installation done!", "done")
 	rlog.Notify("Note: if you want to be able to use the rays command globally, you'l need to register this directory in your PATH variable.", "info")
 }
+
+var systemdService string = `[Unit]
+Description=ray server (rays)
+After=network.target
+
+[Service]
+User=${User}
+Restart=always
+ExecStart=${BinaryPath} --daemon
+ExecReload=${BinaryPath} reload
+ExecStop=${BinaryPath} stop
+
+[Install]
+WantedBy=multi-user.target`
