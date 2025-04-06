@@ -27,17 +27,25 @@ type tlsConfig struct {
 	Provider string //enum, possile vals are "letsencrypt" and "custom". 
 }
 
+type gitAuth struct {
+	Username string
+	Password string
+}
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	TLS tlsConfig
 	EnableRayUtil bool
+	GitAuth gitAuth
 }
 
 type pipelineStep struct {
 	Tool string
 	Command string
+	Dir string //directory to run command in
 	Type string //enum, possible vals are "build" and "deploy"
+	Options map[string]string //only available on built in tools
 }
 
 type projectConfig struct {

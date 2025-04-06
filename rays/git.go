@@ -9,7 +9,17 @@ import (
 )
 
 func getBranches(repo string) map[string]string { //returns map with branch:hash
-	resp, err := http.Get(repo + "/info/refs?service=git-upload-pack") //see https://git-scm.com/docs/http-protocol
+	req, err := http.NewRequest("GET", repo+"/info/refs?service=git-upload-pack", nil)
+	if err != nil {
+		rlog.Notify("Failed to create HTTP request for " + repo + ".", "warn")
+		return nil
+	}
+	if (rconf.GitAuth.Username != "" || rconf.GitAuth.Password != "") {
+		req.SetBasicAuth(rconf.GitAuth.Username, rconf.GitAuth.Password)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if (err != nil) {
 		rlog.Notify("Could not fetch repository information for " + repo + ".", "warn")
 		return nil

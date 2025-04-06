@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -121,15 +122,26 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	for stepIndex, step := range config.Pipeline {
 		if (step.Tool == "rayserve" && step.Type == "deploy") {
 			(*swapfunction)()
-			staticServer(dir, process.Port, &process)
+			serveDir := dir
+			if (step.Dir != "") {
+				serveDir = path.Join(serveDir, step.Dir)
+			}
+			if (step.Options["Dir"] != "") {
+				serveDir = path.Join(serveDir, step.Options["Dir"])
+			}
+			staticServer(serveDir, process.Port, &process)
 
 			continue
 		} else if (step.Tool == "rayserve") {
 			rlog.Notify("ray.config.json error: rayserve is a built in ray tool that requires type deploy.", "err")
 		}
 
-		cmd := exec.Command(step.Tool, step.Command)
-		cmd.Dir = dir
+		cmd := exec.Command(step.Tool, strings.Split(step.Command, " ")...)
+		if (step.Dir != "") {
+			cmd.Dir = path.Join(dir, step.Dir)
+		} else {
+			cmd.Dir = dir
+		}
 		cmd.Env = cmd.Environ()
 		stderr, _ := cmd.StderrPipe()
 		if (err != nil) {
@@ -154,6 +166,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		}
 
 		err := cmd.Start()
+		
 		if step.Type == "build" {
 			cmd.Wait()
 		} else {
