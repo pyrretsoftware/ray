@@ -12,7 +12,7 @@ func assignDotSlash() {
 		rlog.Fatal("Cant get current executable: " + err.Error())
 	}
 
-	dotslash = path.Dir(exc)
+	dotslash = path.Join(path.Dir(exc), "ray-env")
 }
 
 func getProcessFromBranch(branch string) *process {

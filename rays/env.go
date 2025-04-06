@@ -274,6 +274,7 @@ func SetupEnv() {
 	_cnf := readConfig()
 	rconf = &_cnf
 	
+	os.Mkdir(dotslash, 0600)
 	os.Mkdir(dotslash + "/projects", 0600)
 	os.Mkdir(dotslash + "/ray-certs", 0600)
 
