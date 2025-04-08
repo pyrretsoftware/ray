@@ -99,7 +99,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 	}
 }
 
-func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string) {
+func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
 	if (err != nil) {
@@ -114,28 +114,43 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		rlog.Fatal(err)
 	}
 
+	logFile := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".txt")
+	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		rlog.Fatal("Failed writing to log file.")
+	}
+
 	process.Project = project
 	process.Active = true
 	process.State = "OK"
+	process.LogFile = logFile
 	process.Port = pickPort()
 	
 	for stepIndex, step := range config.Pipeline {
-		if (step.Tool == "rayserve" && step.Type == "deploy") {
+		BuiltIntool := builtIn(step)
+
+		if (BuiltIntool == "rayserve") {
 			(*swapfunction)()
 			serveDir := dir
-			if (step.Dir != "") {
-				serveDir = path.Join(serveDir, step.Dir)
+			if (step.Options.Dir != "") {
+				serveDir = path.Join(serveDir, step.Options.Dir)
 			}
 			staticServer(serveDir, process.Port, &process)
-
 			continue
-		} else if (step.Tool == "rayserve") {
-			rlog.Notify("ray.config.json error: rayserve is a built in ray tool that requires type deploy.", "err")
 		}
 
+		if (step.Options.IfAvailable) {
+			_, err := exec.LookPath(step.Tool)
+			if (err != nil) {
+				rlog.Println("Command " + step.Tool + " is not available on this system. Skipping...")
+				f.WriteString("")
+				continue
+			}
+		} 
+
 		cmd := exec.Command(step.Tool, strings.Split(step.Command, " ")...)
-		if (step.Dir != "") {
-			cmd.Dir = path.Join(dir, step.Dir)
+		if (step.Options.Dir != "") {
+			cmd.Dir = path.Join(dir, step.Options.Dir)
 		} else {
 			cmd.Dir = dir
 		}
@@ -157,11 +172,23 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		for field, val := range project.EnvVars {
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
+
+		for field, val := range step.Options.EnvVar {
+			cmd.Env = append(cmd.Env, field + "=" + val)
+		}
 		cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
 		if (step.Type == "deploy") {
 			(*swapfunction)()
 		}
 
+		if (step.Type == "build") {
+			f.WriteString("--------------------------------------------\n")
+			f.WriteString("Next step:\n")
+			f.WriteString("--------------------------------------------\n")
+			cmd.Stdout = f
+		} else if (step.Type == "deploy") {
+			f.Close()
+		}
 		err := cmd.Start()
 		
 		if step.Type == "build" {
@@ -234,6 +261,7 @@ func startProject(project *project, env string) {
 
 		dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
 		os.Mkdir(dir, 0600)
+		os.Mkdir(path.Join(dir, "logs"), 0600)
 
 		_cmd := []string{"clone", project.Src}
 		if (deployment.Type != "prod") {
@@ -274,7 +302,7 @@ func startProject(project *project, env string) {
 		if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
-		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash)
+		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"))
 	}
 }
 

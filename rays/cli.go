@@ -103,7 +103,6 @@ func cliSendCommand(command string, args []string) []byte {
 
 	return _command
 }
-
 func daemonListen() {
 	socketPath := dotslash + "/clisocket.sock"
 

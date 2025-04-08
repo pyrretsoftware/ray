@@ -32,24 +32,48 @@ type gitAuth struct {
 	Password string
 }
 
+type rayStatusConfig struct {
+	Name string
+	Desc string
+}
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	TLS tlsConfig
 	EnableRayUtil bool
 	GitAuth gitAuth
+	RayStatus rayStatusConfig
 }
 
+type pipelineOptions struct {
+	Dir string //directory to run command in
+	IfAvailable bool //Whether or the command is optional based on if its available on the current system.
+	EnvVar map[string]string //enviroment variables to pass the command
+}
 type pipelineStep struct {
 	Tool string
 	Command string
-	Dir string //directory to run command in
 	Type string //enum, possible vals are "build" and "deploy"
-	Options map[string]string //only available on built in tools
+	Options pipelineOptions
 }
 
 type projectConfig struct {
+	Version string
 	Pipeline []pipelineStep
+}
+
+type statusItem struct {
+	Running bool
+	Text string
+	Subtext string
+}
+
+type rayStatus struct {
+	Name string
+	Desc string
+	Status statusItem
+	Processes []statusItem
 }
 
 type process struct {
@@ -63,4 +87,5 @@ type process struct {
 	remove func()
 	Branch string
 	Hash string
+	LogFile string
 }
