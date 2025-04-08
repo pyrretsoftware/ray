@@ -126,9 +126,6 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			if (step.Dir != "") {
 				serveDir = path.Join(serveDir, step.Dir)
 			}
-			if (step.Options["Dir"] != "") {
-				serveDir = path.Join(serveDir, step.Options["Dir"])
-			}
 			staticServer(serveDir, process.Port, &process)
 
 			continue
