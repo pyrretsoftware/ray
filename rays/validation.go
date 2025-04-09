@@ -8,7 +8,7 @@ var deploymentTypes = []string{
 	"hidden",
 }
 
-func analyzeDeployments(deployments []deployment) {
+func validateDeployments(deployments []deployment) {
 	var enrollments = 0
 	for _, deployment := range deployments {
 		if deployment.Type == "" {
