@@ -47,6 +47,10 @@ func validateProjectConfig(projectConfig projectConfig) {
 		if step.Type == "deploy" && !step.Options.IfAvailable {
 			alwaysRanDeploySteps += 1
 		}
+
+		if (step.Type != "deploy" && step.Type != "build") {
+			rlog.Fatal("Only valid pipeline step types are 'deploy' and 'build'.")
+		}
 	}
 
 	if (alwaysRanDeploySteps > 1) {
