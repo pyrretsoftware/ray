@@ -12,6 +12,8 @@ type project struct {
 	EnvVars map[string]string
 	Domain string
 	Deployments []deployment
+	PluginImplementation string
+	Options map[string]string
 }
 
 type auth struct {
@@ -32,18 +34,12 @@ type gitAuth struct {
 	Password string
 }
 
-type rayStatusConfig struct {
-	Name string
-	Desc string
-}
-
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	TLS tlsConfig
 	EnableRayUtil bool
 	GitAuth gitAuth
-	RayStatus rayStatusConfig
 }
 
 type pipelineOptions struct {
@@ -72,7 +68,7 @@ type statusItem struct {
 type rayStatus struct {
 	Name string
 	Desc string
-	Status statusItem
+	EverythingUp bool
 	Processes []statusItem
 }
 

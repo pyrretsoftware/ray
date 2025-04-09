@@ -25,6 +25,7 @@ const (
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "Host not found",
 	`AuthError` : "Incorrect credentials",
+	` connection refused` : "Server not responding",
 }
 
 func intParse(val string) int64 {
@@ -73,17 +74,21 @@ func startProxy() {
 					break
 				}
 			}
+			if (!foundProcess) {return}
 
-			if (!foundProcess) {
-				return
+			//invoke plugin
+			pluginData, ok := invokePlugin(*requestProcess.Project)
+			if ok {
+				r.Out.Header.Add("x-ray-plugin-data", pluginData)
 			}
 
+			//get channel
 			_ch, err := r.In.Cookie("ray-channel")
 			_enrolled, enerr := r.In.Cookie("ray-enrolled-at")
 
 			chnl := ""
 			requiresAuth := false
-			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) {
+			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) { //enroll new user
 				var rand = rand.Float64() * 100
 					dplymnt := requestProcess.Project.Deployments
 	
@@ -233,7 +238,11 @@ func startProxy() {
 			content := errorPage
 			
 			w.WriteHeader(400)
-			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorCodes[errorCode]), "${RayVer}", _version)))
+			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":")) - 1]]
+			if (errorMsg == "") {
+				rlog.Notify("Sending unknown error: " + errorCode, "err")
+			}
+			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", _version)))
 		},
 	}}
 	go startHttpServer(srv)

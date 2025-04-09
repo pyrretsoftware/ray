@@ -128,20 +128,21 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	
 	for stepIndex, step := range config.Pipeline {
 		BuiltIntool := builtIn(step)
+		commandDir := dir
+		if (step.Options.Dir != "") {
+			commandDir = path.Join(commandDir, step.Options.Dir)
+		}
 
 		if (BuiltIntool == "rayserve") {
 			(*swapfunction)()
-			serveDir := dir
-			if (step.Options.Dir != "") {
-				serveDir = path.Join(serveDir, step.Options.Dir)
-			}
-			staticServer(serveDir, process.Port, &process)
+			staticServer(commandDir, process.Port, &process)
 			continue
 		}
 
 		if (step.Options.IfAvailable) {
+			_, errLocal := os.Stat(path.Join(commandDir, step.Tool))
 			_, err := exec.LookPath(step.Tool)
-			if (err != nil) {
+			if (err != nil && errLocal != nil) {
 				rlog.Println("Command " + step.Tool + " is not available on this system. Skipping...")
 				f.WriteString("")
 				continue
@@ -149,11 +150,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		} 
 
 		cmd := exec.Command(step.Tool, strings.Split(step.Command, " ")...)
-		if (step.Options.Dir != "") {
-			cmd.Dir = path.Join(dir, step.Options.Dir)
-		} else {
-			cmd.Dir = dir
-		}
+		cmd.Dir = commandDir
 		cmd.Env = cmd.Environ()
 		stderr, _ := cmd.StderrPipe()
 		if (err != nil) {
@@ -177,6 +174,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
 		cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
+		cmd.Env = append(cmd.Env, "RAY_PORT=" + strconv.Itoa(process.Port))//compatability
 		if (step.Type == "deploy") {
 			(*swapfunction)()
 		}
@@ -261,7 +259,6 @@ func startProject(project *project, env string) {
 
 		dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
 		os.Mkdir(dir, 0600)
-		os.Mkdir(path.Join(dir, "logs"), 0600)
 
 		_cmd := []string{"clone", project.Src}
 		if (deployment.Type != "prod") {
@@ -280,6 +277,8 @@ func startProject(project *project, env string) {
 		if (err != nil) {
 			rlog.Fatal(err)
 		}
+
+		os.Mkdir(path.Join(dir, "logs"), 0600)//Making sure to do this after we've cloned the repo
 	
 		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json"
 		if _, err := os.Stat(projectConfig); err != nil {
