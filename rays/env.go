@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"math/rand/v2"
@@ -155,6 +156,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		cmd.Dir = commandDir
 		cmd.Env = cmd.Environ()
 		stderr, _ := cmd.StderrPipe()
+
 		if (err != nil) {
 			log.Panic("error getting stderr.")
 		}
@@ -189,24 +191,28 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		} else if (step.Type == "deploy") {
 			f.Close()
 		}
-		err := cmd.Start()
+		var stdoutBuffer strings.Builder //implements io.Writer
+		cmd.Stdout = &stdoutBuffer
+		cmd.Stderr = &stdoutBuffer
+
+		commandError := cmd.Start()
 		
 		if step.Type == "build" {
-			cmd.Wait()
+			commandError = cmd.Wait()
 		} else {
 			time.Sleep(1000 * time.Millisecond)
 		}
 
-		if (err != nil) {
-			if (strings.Contains(err.Error(), exec.ErrNotFound.Error())) {
+		if (commandError != nil) {
+			if (strings.Contains(commandError.Error(), exec.ErrNotFound.Error())) {
 				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch + "): the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.", "err")
 			} else {
-				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch +"), is there and issue with your command?", "err")
-				rlog.BuildNotify("", "err")
-				rlog.BuildNotify(cmd.Stdout, "err")
+				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch +", step " + strconv.Itoa((stepIndex + 1)) + "), is there an issue with your command?", "err")
+				rlog.BuildNotify("Output:", "err")
+				fmt.Println(stdoutBuffer.String())
 			}
 			process.Active = false
-			process.State = err.Error()
+			process.State = commandError.Error()
 		} else {
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
