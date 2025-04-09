@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -46,10 +47,19 @@ func installPack(pack inPack) {
 	installLocation := "/usr/bin"
 	if runtime.GOOS == "windows" {
 		dir, err := os.UserHomeDir()
+		log.Println("Since you're on Windows, you will need to add %%USERPROFILE%% to your path variable if you want to use the 'rays' command globally.")
 		if err != nil {
 			log.Fatal(err)
 		}
 		installLocation = dir
+	}
+	os.Mkdir(path.Join(installLocation, "ray-env"), 0600)
+
+	if _, err := os.Stat(path.Join(installLocation, "ray-env", "rayconfig.json")); errors.Is(err, os.ErrNotExist) {
+		log.Println("Created default config.")
+		os.WriteFile(path.Join(installLocation, "ray-env", "rayconfig.json"), []byte(defaultConfig), 0600)
+	} else {
+		log.Println("Config already exists, using existing one.")
 	}
 
 	for _, file := range pack.Binaries {
@@ -75,3 +85,14 @@ ExecStop=${BinaryPath} stop
 
 [Install]
 WantedBy=multi-user.target`
+
+var defaultConfig string = `{
+    "EnableRayUtil" : true,
+    "Projects": [
+        {
+            "Name": "ray demo",
+            "Src": "https://github.com/pyrretsoftwarelabs/ray-demo",
+            "Domain": "localhost"
+        }
+    ]
+}`

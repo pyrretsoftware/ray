@@ -114,8 +114,6 @@ func main() {
 				Usage: "unpack an installation package",
 				Args: true,
 				Action: func(ctx *cli.Context) error {
-					fmt.Print("")
-
 					packFile, err := os.ReadFile(ctx.Args().First())
 					if (err != nil) {
 						fmt.Println(err)
@@ -144,6 +142,19 @@ func main() {
 				Aliases: []string{"i"},
 				Usage: "install an installation package",
 				Action: func(ctx *cli.Context) error {
+					packFile, err := os.ReadFile(ctx.Args().First())
+					if (err != nil) {
+						fmt.Println(err)
+						return err
+					}
+					var pack inPack
+					err = json.Unmarshal(packFile, &pack)
+					if (err != nil) {
+						fmt.Println(err)
+						return err
+					}
+
+					installPack(pack)
 					return nil
 				},
 			},
