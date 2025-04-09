@@ -1,9 +1,25 @@
 package main
 
 import (
+	"math/rand/v2"
+	"net"
 	"os"
 	"path"
+	"strconv"
 )
+
+func pickPort() int {
+	port := rand.IntN(16383) + 49152
+
+	ln, err := net.Listen("tcp", ":" + strconv.Itoa(port))
+	if err != nil {
+		return pickPort()
+	}
+  
+	ln.Close()
+	rlog.Println("Using available port " + strconv.Itoa(port) + ".")
+	return port
+}
 
 var dotslash string = ""
 func assignDotSlash() {

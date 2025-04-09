@@ -18,10 +18,6 @@ import (
 var exiting = false
 var processes []*process
 
-func pickPort() int {
-	return rand.IntN(16383) + 49152
-}
-
 func trackProcess(cmd *exec.Cmd, process *process, stderr *io.ReadCloser) {
 	err := cmd.Wait()
 	if exiting || process.State == "drop" {return}
