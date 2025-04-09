@@ -108,11 +108,13 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 
 	var config projectConfig
 	var process process
+
 	process.Branch = branch
 	process.Hash = branchHash
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
+	validateProjectConfig(config)
 
 	logFile := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".txt")
 	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE, 0600)
@@ -222,6 +224,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 					rlog.Println("Process has not yet started listening for connections.")
 					go waitForPortOpen(&process)
 				}
+				break
 			}
 		}
 	}

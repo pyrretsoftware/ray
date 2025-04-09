@@ -32,3 +32,24 @@ func validateDeployments(deployments []deployment) {
 		rlog.Fatal("Adding up the enrollment rates from all test deployments gives a value above 100. Please make sure it adds up to 100 or below.")
 	}
 }
+
+func validateProjectConfig(projectConfig projectConfig) {
+	if projectConfig.Version == "" {
+		rlog.Notify("Project config does not specify a version, not required as of ray v1.0.0 but highly recommended and will be required in the future.", "warn")
+	}
+
+	if projectConfig.Pipeline[len(projectConfig.Pipeline)-1].Type != "deploy" {
+		rlog.Fatal("Last step in deployment pipeline needs to be of type deploy.")
+	}
+
+	alwaysRanDeploySteps := 0
+	for _, step := range projectConfig.Pipeline {
+		if step.Type == "deploy" && !step.Options.IfAvailable {
+			alwaysRanDeploySteps += 1
+		}
+	}
+
+	if (alwaysRanDeploySteps > 1) {
+		rlog.Fatal("Project config contains multiple pipeline steps of type deploy that will always be ran.")
+	}
+}
