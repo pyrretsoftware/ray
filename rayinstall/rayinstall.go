@@ -57,10 +57,15 @@ func main() {
 				Action: func(ctx *cli.Context) error {
 					fmt.Println("Packaging...")
 
-					rays, err := os.ReadFile("./rays" + fileEnding)
+					rays, err := os.ReadFile("./rays")
 					if (err != nil) {
-						fmt.Println(err)
-						return err
+						_r, err := os.ReadFile("./rays.exe")
+						if (err != nil) {
+							fmt.Println(err)
+							return err
+						} else {
+							rays = _r
+						}
 					}
 					_metadata, err := os.ReadFile("./metadata.json")
 					var met metadata
