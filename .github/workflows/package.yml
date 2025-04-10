@@ -51,7 +51,7 @@ jobs:
           cd ..
           
           # Copy rays binary to rayinstall directory
-          cp ../dist/$OUTPUT_NAME rayinstall/
+          cp dist/$OUTPUT_NAME rayinstall/
           
           # Create metadata.json
           RAY_VERSION=$(cat rays/version)
