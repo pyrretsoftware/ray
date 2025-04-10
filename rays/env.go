@@ -148,7 +148,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			}
 		} 
 
-		cmd := exec.Command(step.Tool, strings.Split(step.Command, " ")...)
+		cmd := exec.Command(step.Tool, step.Command...)
 		cmd.Dir = commandDir
 		cmd.Env = cmd.Environ()
 		stderr, _ := cmd.StderrPipe()

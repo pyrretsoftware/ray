@@ -1,0 +1,99 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROJECT_ROOT: ./rays
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goos: [windows, linux]
+        goarch: [amd64, arm, arm64, 386]
+        exclude:
+          - goos: windows
+            goarch: arm
+          - goos: windows
+            goarch: arm64
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build rays
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          cd $PROJECT_ROOT
+          OUTPUT_NAME="rays"
+          if [ "$GOOS" = "windows" ]; then
+            OUTPUT_NAME+=".exe"
+          fi
+          mkdir -p ../dist
+          go build -o ../dist/$OUTPUT_NAME .
+          cp bin-readme.txt ../dist/readme.txt
+          cd ..
+          
+          # Copy rays binary to rayinstall directory
+          cp dist/$OUTPUT_NAME rayinstall/
+          
+          # Create metadata.json
+          RAY_VERSION=$(cat rays/version)
+          echo "{\"RayVersion\":\"$RAY_VERSION\",\"Platform\":\"$GOOS\"}" > rayinstall/metadata.json
+      
+      - name: Build rayinstall for runner
+        run: |
+          cd rayinstall
+          go build -o rayinstall .
+          
+      - name: Create installation package
+        run: |
+          cd rayinstall
+          ./rayinstall package
+          
+      - name: Build rayinstall for target platform
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          cd rayinstall
+          OUTPUT_NAME="rayinstall"
+          if [ "$GOOS" = "windows" ]; then
+            OUTPUT_NAME+=".exe"
+          fi
+          go build -o $OUTPUT_NAME .
+          
+      - name: Package files
+        run: |
+          mkdir -p dist-package
+          cd rayinstall
+          cp build.rpack ../dist-package/
+          cp rayinstall* ../dist-package/
+          
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ray-installer-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist-package/*
+          
+      - name: Upload Original rays Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rays-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*

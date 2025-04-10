@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+
 	"github.com/urfave/cli/v2"
 )
 type metadata struct {
@@ -88,7 +89,7 @@ func main() {
 						fmt.Println(err)
 						return err
 					}
-					err = os.WriteFile("ray-" + met.RayVersion + "-" + met.Platform + ".rpack", packFile, 0777)
+					err = os.WriteFile("build.rpack", packFile, 0777)
 					if (err != nil) {
 						fmt.Println(err)
 						return err
@@ -160,7 +161,6 @@ func main() {
 			},
 			{
 				Name: "uninstall",
-				Aliases: []string{"i"},
 				Usage: "install rays",
 				Action: func(ctx *cli.Context) error {
 					uninstall()
@@ -170,7 +170,6 @@ func main() {
 		},
 		
 	}
-	
 
 	app.Run(os.Args)
 }

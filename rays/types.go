@@ -49,7 +49,7 @@ type pipelineOptions struct {
 }
 type pipelineStep struct {
 	Tool string
-	Command string
+	Command []string
 	Type string //enum, possible vals are "build" and "deploy"
 	Options pipelineOptions
 }
