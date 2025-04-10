@@ -89,11 +89,11 @@ jobs:
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: ray-installer-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist-package/*
           
       - name: Upload Original rays Binary
         uses: actions/upload-artifact@v4
         with:
-          name: rays-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: rays-${{ matrix.goos }}-${{ matrix.goarch }}-bin
           path: dist/*
