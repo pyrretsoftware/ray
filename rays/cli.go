@@ -65,7 +65,7 @@ func cliSendCommand(command string, args []string) []byte {
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
 		fmt.Println("Failed connecting to rays, it may not have finished initalization or it may not be started at all.")
-		log.Fatal(err.Error())
+		fmt.Println("Tip: try running with sudo/with elevated permissions")
 	}
 	defer conn.Close()
 

@@ -33,7 +33,7 @@ func assignDotSlash() {
 
 func getProcessFromBranch(branch string) *process {
 	for _, process := range processes {
-		if (process.Branch == branch && process.Ghost == false && process.State != "drop") {
+		if (process.Branch == branch && !process.Ghost && process.State != "drop") {
 			return process
 		}
 	}

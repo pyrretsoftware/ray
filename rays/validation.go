@@ -34,7 +34,7 @@ func validateDeployments(deployments []deployment) {
 }
 
 func validateProjectConfig(projectConfig projectConfig) {
-	if projectConfig.Version == "" {
+	if projectConfig.Version == "" && _version == "v1.0.0" {
 		rlog.Notify("Project config does not specify a version, not required as of ray v1.0.0 but highly recommended and will be required in the future.", "warn")
 	}
 

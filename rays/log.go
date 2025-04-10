@@ -19,7 +19,7 @@ type loggerType struct {
 
 var logTypes = map[string]string{
 	"info":  "[\x1b[34mi\x1b[0m]",
-	"warn":  "[\x1b[33m⚠︎\x1b[0m]",
+	"warn":  "[\x1b[33m!\x1b[0m]",
 	"done":  "[\x1b[32m✓\x1b[0m]",
 	"err": "[\x1b[31mx\x1b[0m]",
 }

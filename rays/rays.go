@@ -2,13 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path"
 	"strconv"
 )
 
 var _version = "v1.0.0"
-
 
 func formatProcessList(process process) string {
 	var state string
@@ -27,6 +29,7 @@ func formatProcessList(process process) string {
 	}
 
 	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
+	content += "\n- Log file: "+ process.LogFile
 	content += "\n- Deployment: "+ process.Branch
 
 	return content
@@ -96,6 +99,12 @@ func main() {
 
 			rlog.Notify("Success!", "done")
 			rlog.Println("Token: " + response.Token)
+		case "edit-config":
+			err := exec.Command("nano", path.Join(dotslash, "rayconfig.json")).Run()
+			if (err == exec.ErrNotFound) {
+				fmt.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
+				fmt.Println(path.Join(dotslash, "rayconfig.json"))
+			}
 		case "setup":
 			install()
 		}
