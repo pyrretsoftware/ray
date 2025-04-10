@@ -158,6 +158,15 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name: "uninstall",
+				Aliases: []string{"i"},
+				Usage: "install rays",
+				Action: func(ctx *cli.Context) error {
+					uninstall()
+					return nil
+				},
+			},
 		},
 		
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path"
 	"runtime"
@@ -53,13 +54,21 @@ func installPack(pack inPack) {
 		}
 		installLocation = dir
 	}
-	os.Mkdir(path.Join(installLocation, "ray-env"), 0600)
 
-	if _, err := os.Stat(path.Join(installLocation, "ray-env", "rayconfig.json")); errors.Is(err, os.ErrNotExist) {
-		log.Println("Created default config.")
-		os.WriteFile(path.Join(installLocation, "ray-env", "rayconfig.json"), []byte(defaultConfig), 0600)
+	if _, err := os.Stat(path.Join(installLocation, "rays")); err == nil {
+		log.Println("Rays is already installed, updating...")
+
+		if (runtime.GOOS == "linux") {
+			exec.Command("systemctl", "stop", "rays").Run()
+		}
 	} else {
-		log.Println("Config already exists, using existing one.")
+		os.Mkdir(path.Join(installLocation, "ray-env"), 0600)
+		if _, err := os.Stat(path.Join(installLocation, "ray-env", "rayconfig.json")); errors.Is(err, os.ErrNotExist) {
+			log.Println("Created default config.")
+			os.WriteFile(path.Join(installLocation, "ray-env", "rayconfig.json"), []byte(defaultConfig), 0600)
+		} else {
+			log.Println("Config already exists, using existing one.")
+		}
 	}
 
 	for _, file := range pack.Binaries {
@@ -71,7 +80,40 @@ func installPack(pack inPack) {
 	}
 	registerDaemon(path.Join(installLocation, "rays" + fileEnding))
 }
+func removeComponent(dir string) {
+	if comp, err := os.Stat(dir); err == nil {
+		log.Println("Removing " + dir)
 
+		rmfunc := os.Remove
+		if (comp.IsDir()) {
+			rmfunc = os.RemoveAll
+		}
+		err := rmfunc(dir)
+		if (err != nil) {
+			log.Fatal("Couldnt remove component: ", err)
+		}
+	} else {
+		log.Fatal("Component " + dir +" not found, ray might not have been properly installed.")
+	}
+}
+
+func uninstall() {
+	installLocation := "/usr/bin"
+	if runtime.GOOS == "windows" {
+		dir, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		installLocation = dir
+	}
+
+	if (runtime.GOOS == "linux") {
+		exec.Command("systemctl", "stop", "rays").Run()
+		removeComponent("/etc/systemd/system/rays.service")
+	}
+	removeComponent(path.Join(installLocation, "rays"))
+	removeComponent(path.Join(installLocation, "ray-env"))
+}
 var systemdService string = `[Unit]
 Description=ray server (rays)
 After=network.target
