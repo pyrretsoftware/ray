@@ -111,7 +111,7 @@ func uninstall() {
 		exec.Command("systemctl", "stop", "rays").Run()
 		removeComponent("/etc/systemd/system/rays.service")
 	}
-	removeComponent(path.Join(installLocation, "rays"))
+	removeComponent(path.Join(installLocation, "rays" + fileEnding))
 	removeComponent(path.Join(installLocation, "ray-env"))
 }
 var systemdService string = `[Unit]
