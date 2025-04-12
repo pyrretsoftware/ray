@@ -20,7 +20,7 @@ ray is an open source tool which core purpose is deploying and managing web appl
 
 ray can automatically deploy from a git repo and manage different deployment channels on different branches. ray also includes a reverse proxy (ray router) to, well, route your request to the correct place, but also to manage things like automatically enrolling users to different deployment channels.
 # ray's current stage of development
-ray is currently very early in development. Right now it's certinaly not recommended to use it in a production environment.
+ray is currently early in development. The latest release (v1.0.0) is considered to be stable but some extra features are not guaranteed to work and it could contain bugs, so it might be smart to wait before using ray in production.
 # terms
 - rays - ray server (the software running on the server)
-- rayc - ray client (client software to remotely communicate with a ray server)
+- rayinstall - ray installer (utility to help with installing ray installation packages, .rpack files)
