@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/exec"
+	"path"
 	"time"
 )
 
@@ -14,6 +16,70 @@ type cliCommand struct {
 	Args    []string
 }
 
+func handleCommand(args []string) {
+	switch (args[1]) {
+	case "list":
+		var response []process
+		err := json.Unmarshal(cliSendCommand("LISTPROCESS", nil), &response)
+		if (err != nil) {
+			log.Fatal(err)
+		}
+
+		for _, process := range response {
+			rlog.Println(formatProcessList(process))
+		}
+	case "reload":
+		rlog.Println("Reloading processes")
+		data := cliSendCommand("RELOAD", nil)
+		if (string(data) == "success\n") {
+			rlog.Notify("Reloaded successfully.", "done")
+			os.Exit(0)
+		} else {
+			rlog.Println("Rays did not indicate success in reloading processes, please check the status of the server.")
+			os.Exit(1)
+		}
+	case "force-renrollment":
+		rlog.Println("Forcing a renrollment onto all users who were enrolled into a channel before this point...")
+		data := cliSendCommand("FORCE_RE", nil)
+		if (string(data) == "\n") {
+			rlog.Notify("Applied changed to config.", "done")
+		} else {
+			rlog.Fatal("Failed applying changes to config.")
+		}
+	case "stop":
+		rlog.Println("Exiting...")
+		data := cliSendCommand("STOP", nil)
+
+		if (string(data) == "\n") {
+			rlog.Notify("Exited!", "done")
+		}
+		os.Exit(0)
+	case "dev-auth":
+		rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
+		
+		var response auth
+		err := json.Unmarshal(cliSendCommand("GETDEVAUTH", nil), &response)
+		if (err != nil) {
+			log.Fatal(err)
+		}
+
+		rlog.Notify("Success!", "done")
+		rlog.Println("Token: " + response.Token)
+	case "edit-config":
+		nano := exec.Command("nano", path.Join(dotslash, "rayconfig.json"))
+		nano.Stdout = os.Stdout
+		nano.Stderr = os.Stderr
+		nano.Stdin = os.Stdin
+
+		err := nano.Run()
+		if (err == exec.ErrNotFound) {
+			fmt.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
+			fmt.Println(path.Join(dotslash, "rayconfig.json"))
+		} else {
+			rlog.Notify("Exited nano without error", "done")
+		}
+	}
+}
 
 func daemonHandleCommand(command cliCommand) []byte {
 	switch command.Command {
@@ -37,7 +103,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 
 		var data string
 		if (err == nil) {
-			data = ""
+			return []byte("")
 		} else {
 			data = err.Error()
 		}
@@ -103,6 +169,7 @@ func cliSendCommand(command string, args []string) []byte {
 
 	return _command
 }
+
 func daemonListen() {
 	socketPath := dotslash + "/clisocket.sock"
 

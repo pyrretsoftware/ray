@@ -1,12 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"path"
 	"strconv"
 )
 
@@ -37,6 +32,9 @@ func formatProcessList(process process) string {
 
 
 func main() {
+	if (!checkPerms()) {
+		rlog.Fatal("To use the ray CLI or to launch rays you need to run as root or using sudo")
+	}
 	assignDotSlash()
 	if (len(os.Args) == 1) {
 		rlog.Fatal("No arguments passed!")
@@ -51,62 +49,6 @@ func main() {
 		startProxy()
 		select {}
 	} else {
-		switch (os.Args[1]) {
-		case "list":
-			var response []process
-			err := json.Unmarshal(cliSendCommand("LISTPROCESS", nil), &response)
-			if (err != nil) {
-				log.Fatal(err)
-			}
-
-			for _, process := range response {
-				rlog.Println(formatProcessList(process))
-			}
-		case "reload":
-			rlog.Println("Reloading processes")
-			data := cliSendCommand("RELOAD", nil)
-			if (string(data) == "success\n") {
-				rlog.Notify("Reloaded successfully.", "done")
-				os.Exit(0)
-			} else {
-				rlog.Println("Rays did not indicate success in reloading processes, please check the status of the server.")
-				os.Exit(1)
-			}
-		case "force-renrollment":
-			rlog.Println("Forcing a renrollment onto all users who were enrolled into a channel before this point...")
-			data := cliSendCommand("FORCE_RE", nil)
-			if (string(data) == "\n") {
-				rlog.Notify("Applied changed to config.", "done")
-			} else {
-				rlog.Fatal("Failed applying changes to config.")
-			}
-		case "stop":
-			rlog.Println("Exiting...")
-			data := cliSendCommand("STOP", nil)
-
-			if (string(data) == "\n") {
-				rlog.Notify("Exited!", "done")
-			}
-			os.Exit(0)
-		case "dev-auth":
-			rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
-			
-			var response auth
-			err := json.Unmarshal(cliSendCommand("GETDEVAUTH", nil), &response)
-			if (err != nil) {
-				log.Fatal(err)
-			}
-
-			rlog.Notify("Success!", "done")
-			rlog.Println("Token: " + response.Token)
-		case "edit-config":
-			err := exec.Command("nano", path.Join(dotslash, "rayconfig.json")).Run()
-			if (err == exec.ErrNotFound) {
-				fmt.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
-				fmt.Println(path.Join(dotslash, "rayconfig.json"))
-			}
-		case "setup":
-			install()
-		}
+		handleCommand(os.Args)
 	}
 }

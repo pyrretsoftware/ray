@@ -5,8 +5,16 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 )
+
+func checkPerms() bool {
+	if runtime.GOOS == "linux" {
+		return os.Geteuid() == 0
+	}
+	return true
+}
 
 func pickPort() int {
 	port := rand.IntN(16383) + 49152
