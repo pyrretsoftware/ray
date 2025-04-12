@@ -46,6 +46,7 @@ func startHttpServer(srv *http.Server) {
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
+	rlog.Notify("TLS is currently untested and is not guaranteed to work", "warn")
 	certFile := dotslash + "/ray-certs/server.crt"
 	keyFile := dotslash + "/ray-certs/server.key"
 	if (rconf.TLS.Provider == "letsencrypt") {
