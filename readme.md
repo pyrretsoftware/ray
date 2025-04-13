@@ -4,7 +4,7 @@
   ray
 </h1>
 <p align="center">
-    <i>easily self host your web apps</i>
+    <i>easily self-host your web apps</i>
     <br>
     <a href="https://rdocs.axell.me/guides/install">Installation guide</a>
     <span> | </span>
