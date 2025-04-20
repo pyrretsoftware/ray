@@ -27,7 +27,7 @@ func staticServer(dir string, port int, process *process) *http.Server {
 	process.remove = func() {
 		process.Active = false
 		process.State = "drop"
-		process.Ghost = true
+		makeGhost(process)
 		rlog.Println("Closing server...")
 		srv.Close()
 	}

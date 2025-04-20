@@ -16,6 +16,12 @@ func checkPerms() bool {
 	return true
 }
 
+func makeGhost(process *process) {
+	process.Ghost = true
+	process.State = "drop"
+	os.RemoveAll(process.Env)
+}
+
 func pickPort() int {
 	port := rand.IntN(16383) + 49152
 

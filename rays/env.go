@@ -96,7 +96,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 	}
 }
 
-func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string) {
+func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
 	if (err != nil) {
@@ -120,6 +120,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	}
 
 	process.Project = project
+	process.Env = envDir
 	process.Active = true
 	process.State = "OK"
 	process.LogFile = logFile
@@ -158,8 +159,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		}
 
 		process.remove = func() {
-			process.State = "drop"
-			process.Ghost = true
+			makeGhost(&process)
 			err := cmd.Process.Kill()
 			if err != nil {
 				rlog.Notify("Process kill error " + err.Error(), "err")
@@ -306,7 +306,7 @@ func startProject(project *project, env string) {
 		if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
-		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"))
+		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir)
 	}
 }
 

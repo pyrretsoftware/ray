@@ -8,12 +8,37 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"time"
 )
 
 type cliCommand struct {
 	Command string
 	Args    []string
+}
+
+func formatProcessList(process process) string {
+	var state string
+	if process.Ghost {
+		state = " 👻"
+	} else if (process.Active) {
+		state = " ✅"
+	} else {
+		state = " ❌"
+	}
+	state += " (" + process.State + ")" 
+	var content = process.Project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
+
+	for indx, process := range process.Processes {
+		content += "\n- PID (process " + strconv.Itoa(indx + 1) + "): "+ strconv.Itoa(process)
+	}
+
+	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
+	content += "\n- Log file: "+ process.LogFile
+	content += "\n- Enviroument: "+ process.Env
+	content += "\n- Deployment: "+ process.Branch
+
+	return content
 }
 
 func handleCommand(args []string) {
