@@ -242,6 +242,7 @@ func startProxy() {
 			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":")) - 1]]
 			if (errorMsg == "") {
 				rlog.Notify("Sending unknown error: " + errorCode, "err")
+				errorMsg = "Unknown error"
 			}
 			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", _version)))
 		},
