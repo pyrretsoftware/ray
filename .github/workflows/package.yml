@@ -84,7 +84,7 @@ jobs:
           mkdir -p dist-package
           cd rayinstall
           cp build.rpack ../dist-package/
-          cp rayinstall* ../dist-package/
+          cp rayinstall ../dist-package/
           
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
