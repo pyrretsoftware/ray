@@ -202,9 +202,9 @@ func startProxy() {
 				bodyStr := string(body)
 				rayutl := ""
 				if (ok && ok2) {
-					rayutl = getRayUtilMessage(message, icon)
+					rayutl = getRayUtilMessage(message, icon, r.Header)
 				} else {
-					rayutl = getRayUtil()
+					rayutl = getRayUtil(r.Header)
 				}
 
 				if idx := strings.LastIndex(bodyStr, "</head>"); idx != -1 {
