@@ -111,7 +111,8 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
-	validateProjectConfig(config)
+	validateProjectConfig(config, *project)
+	project.ProjectConfig = config
 
 	logFile := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".txt")
 	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE, 0600)
@@ -124,7 +125,9 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	process.Active = true
 	process.State = "OK"
 	process.LogFile = logFile
-	process.Port = pickPort()
+	if (!config.NotWebsite) {
+		process.Port = pickPort()
+	}
 	
 	for stepIndex, step := range config.Pipeline {
 		BuiltIntool := builtIn(step)
@@ -133,7 +136,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			commandDir = path.Join(commandDir, step.Options.Dir)
 		}
 
-		if (BuiltIntool == "rayserve") {
+		if (BuiltIntool == "rayserve" && !config.NotWebsite) {
 			(*swapfunction)()
 			staticServer(commandDir, process.Port, &process)
 			continue
@@ -169,12 +172,15 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		for field, val := range project.EnvVars {
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
-
 		for field, val := range step.Options.EnvVar {
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
-		cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
-		cmd.Env = append(cmd.Env, "RAY_PORT=" + strconv.Itoa(process.Port))//compatability
+		if (config.NotWebsite) {
+			cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
+			cmd.Env = append(cmd.Env, "RAY_PORT=" + strconv.Itoa(process.Port))
+		}
+		cmd.Env = append(cmd.Env, "RAY_DEPLOYMENT=" + process.Branch)
+
 		if (step.Type == "deploy") {
 			(*swapfunction)()
 		}
@@ -215,6 +221,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 				process.Processes = append(process.Processes, cmd.Process.Pid)
 				go trackProcess(cmd, &process, &stderr)
 
+				if (config.NotWebsite) {break}
 				ports := getProcessPorts(cmd.Process.Pid)
 				if (len(ports) > 0) {
 					if (!slices.Contains(ports, strconv.Itoa(process.Port))) {

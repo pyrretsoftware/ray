@@ -69,7 +69,7 @@ func startProxy() {
 			var requestProcess process
 			foundProcess := false
 			for _, process := range processes {
-				if process.Project.Domain == r.In.Host {
+				if process.Project.Domain == r.In.Host && !process.Project.ProjectConfig.NotWebsite {
 					foundProcess = true
 					requestProcess = *process //note here we are braking as soon as we find an process instance of that project, meaning we'll need to loop over the processes again later for finding the one with out specific channel
 					break

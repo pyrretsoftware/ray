@@ -33,7 +33,17 @@ func validateDeployments(deployments []deployment) {
 	}
 }
 
-func validateProjectConfig(projectConfig projectConfig) {
+func validateProjectConfig(projectConfig projectConfig, project project) {
+	if (projectConfig.NotWebsite) {
+		if project.Domain != "" {
+			rlog.Fatal("Project that's not a website cannot have a domain defined.")
+		}
+
+		if project.PluginImplementation != "" {
+			rlog.Fatal("Project that's not a website cannot implement a plugin.")
+		}
+	}
+
 	if projectConfig.Version == "" && _version == "v1.0.0" {
 		rlog.Notify("Project config does not specify a version, not required as of ray v1.0.0 but highly recommended and will be required in the future.", "warn")
 	}

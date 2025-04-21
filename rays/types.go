@@ -14,6 +14,7 @@ type project struct {
 	Deployments []deployment
 	PluginImplementation string
 	Options map[string]string
+	ProjectConfig projectConfig
 }
 
 type auth struct {
@@ -57,6 +58,7 @@ type pipelineStep struct {
 type projectConfig struct {
 	Version string
 	Pipeline []pipelineStep
+	NotWebsite bool
 }
 
 type statusItem struct {
