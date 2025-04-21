@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"slices"
 )
 
 func applyChanges(_config rayconfig) error {
@@ -31,14 +30,8 @@ func readConfig() rayconfig {
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
-	
-	var nameList []string
-	for _, project := range config.Projects {
-		if slices.Contains(nameList, project.Name) {
-			rlog.Fatal("Fatal rayconfig error: two projects cannot have the same name.")
-		}
-	}
 
+	validateConfig(config)
 	return config
 }
 
