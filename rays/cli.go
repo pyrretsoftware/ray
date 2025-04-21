@@ -22,11 +22,10 @@ func formatProcessList(process process) string {
 	if process.Ghost {
 		state = " 👻"
 	} else if (process.Active) {
-		state = " ✅"
+		state = " ✅ (" + process.State + ")" 
 	} else {
-		state = " ❌"
+		state = " ❌ (error)"
 	}
-	state += " (" + process.State + ")" 
 	var content = process.Project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
 
 	for indx, process := range process.Processes {
@@ -36,6 +35,7 @@ func formatProcessList(process process) string {
 	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
 	content += "\n- Log file: "+ process.LogFile
 	content += "\n- Enviroument: "+ process.Env
+	content += "\n- Hash: "+ process.Hash
 	content += "\n- Deployment: "+ process.Branch
 
 	return content

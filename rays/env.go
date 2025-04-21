@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/rand/v2"
 	"os"
@@ -18,14 +17,13 @@ import (
 var exiting = false
 var processes []*process
 
-func trackProcess(cmd *exec.Cmd, process *process, stderr *io.ReadCloser) {
+func trackProcess(cmd *exec.Cmd, process *process, buffer *strings.Builder) {
 	err := cmd.Wait()
 	if exiting || process.State == "drop" {return}
 	if (err != nil) {
-		rlog.Println("Process errored: ")
-		slurp, _ := io.ReadAll(*stderr)
-		rlog.Println(string(slurp))
-		process.State = string(slurp)
+		rlog.Notify("Process errored: ", "err")
+		rlog.Notify(buffer.String(), "err")
+		process.State = buffer.String()
 	} else {
 		rlog.Println("Process exited.")
 		process.State = "Exited"
@@ -42,7 +40,7 @@ func incorrectPortUsage(process *process, actualPort string) {
 func waitForPortOpen(process *process) {
 	waited := 0
 	var ports []string
-	for (len(ports) > 0 || waited >= 100) {
+	for (len(ports) == 0 && waited < 100) {
 		time.Sleep(500 * time.Millisecond)
 		waited += 1
 		ports = getProcessPorts(process.Processes[0])
@@ -67,7 +65,8 @@ func startUpdateCheck() {
 	}
 }
 
-func updateChecker() {//we wont print anything if no updates are found, as to not fill up log files and such
+func updateChecker() {//we wont print anything if no updates are found, as to not fill up log files
+	var newProjects []project
 	for _, project := range rconf.Projects {
 		branches := getBranches(project.Src)
 		doUpdate := false
@@ -82,7 +81,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 				continue
 			}
 
-			process := getProcessFromBranch(deployment.Branch)
+			process := getProcessFromBranch(deployment.Branch, project)
 			if (process == nil) {continue}
 
 			if (branches[deployment.Branch] != process.Hash) {
@@ -93,7 +92,9 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 			rlog.Println("Performing update on " + project.Name)
 			startProject(&project, rdata.RayEnv)
 		}
+		newProjects = append(newProjects, project)
 	}
+	rconf.Projects = newProjects
 }
 
 func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string) {
@@ -155,7 +156,6 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		cmd := exec.Command(step.Tool, step.Command...)
 		cmd.Dir = commandDir
 		cmd.Env = cmd.Environ()
-		stderr, _ := cmd.StderrPipe()
 
 		if (err != nil) {
 			log.Panic("error getting stderr.")
@@ -175,7 +175,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		for field, val := range step.Options.EnvVar {
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
-		if (config.NotWebsite) {
+		if (!config.NotWebsite) {
 			cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
 			cmd.Env = append(cmd.Env, "RAY_PORT=" + strconv.Itoa(process.Port))
 		}
@@ -202,7 +202,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		if step.Type == "build" {
 			commandError = cmd.Wait()
 		} else {
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(2000 * time.Millisecond)
 		}
 
 		if (commandError != nil) {
@@ -219,7 +219,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
 				process.Processes = append(process.Processes, cmd.Process.Pid)
-				go trackProcess(cmd, &process, &stderr)
+				go trackProcess(cmd, &process, &stdoutBuffer)
 
 				if (config.NotWebsite) {break}
 				ports := getProcessPorts(cmd.Process.Pid)
@@ -340,9 +340,13 @@ func SetupEnv() {
 		os.Remove(dotslash + "/clisocket.sock")
 		os.Exit(0)
 	}()	
-
+	var newProjects []project
 	for _, project := range rconf.Projects {
 		startProject(&project, rdata.RayEnv)
+		newProjects = append(newProjects, project)
 	}
+
+	rconf.Projects = newProjects
+	validateConfig(*rconf)
 	go startUpdateCheck()
 }

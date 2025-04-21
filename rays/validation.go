@@ -19,6 +19,9 @@ func validateConfig(config rayconfig) {
 	var domainList []string
 	for _, project := range config.Projects {
 		if (!project.ProjectConfig.NotWebsite) {
+			if (project.Domain == "") {
+				rlog.Fatal("Fatal rayconfig error: a project must specify a domain.")
+			}
 			if (!slices.Contains(domainList, project.Domain)) {
 				domainList = append(domainList, project.Domain)
 			} else {

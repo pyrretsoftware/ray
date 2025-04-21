@@ -45,9 +45,9 @@ func assignDotSlash() {
 	dotslash = path.Join(path.Dir(exc), "ray-env")
 }
 
-func getProcessFromBranch(branch string) *process {
+func getProcessFromBranch(branch string, project project) *process {
 	for _, process := range processes {
-		if (process.Branch == branch && !process.Ghost && process.State != "drop") {
+		if (process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop") {
 			return process
 		}
 	}

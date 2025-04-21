@@ -31,7 +31,6 @@ func readConfig() rayconfig {
 		rlog.Fatal(err)
 	}
 
-	validateConfig(config)
 	return config
 }
 
