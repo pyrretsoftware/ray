@@ -7,9 +7,9 @@ import (
 
 func serveStaticServer(srv *http.Server, process *process) {
 	err := srv.ListenAndServe()
-	
+
 	if err != nil {
-		if (process.State != "drop") {
+		if process.State != "drop" {
 			rlog.Println("not dropped")
 			process.Active = false
 			process.State = "Exited, " + err.Error()

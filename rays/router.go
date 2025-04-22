@@ -16,21 +16,21 @@ import (
 type routerContextKey string
 
 const (
-	rayChannelKey routerContextKey = "ray-channel"
+	rayChannelKey       routerContextKey = "ray-channel"
 	raySpecialBehaviour routerContextKey = "ray-behaviour"
-	rayUtilMessage routerContextKey = "rayutil-message"
-	rayUtilIcon routerContextKey = "rayutil-icon"
+	rayUtilMessage      routerContextKey = "rayutil-message"
+	rayUtilIcon         routerContextKey = "rayutil-icon"
 )
 
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "Host not found",
-	`AuthError` : "Incorrect credentials",
-	` connection refused` : "Server not responding",
+	`AuthError`:                      "Incorrect credentials",
+	` connection refused`:            "Server not responding",
 }
 
 func intParse(val string) int64 {
 	n, err := strconv.ParseInt(val, 10, 0)
-	if (err != nil) {
+	if err != nil {
 		return 0 //notice in case of a parse error a renrollment will always be trigged, which is probably a good thing since the cookie would have to be incorrectly formatted for us to get here
 	} else {
 		return n
@@ -49,7 +49,7 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 	rlog.Notify("TLS is currently untested and is not guaranteed to work", "warn")
 	certFile := dotslash + "/ray-certs/server.crt"
 	keyFile := dotslash + "/ray-certs/server.key"
-	if (rconf.TLS.Provider == "letsencrypt") {
+	if rconf.TLS.Provider == "letsencrypt" {
 		srv.TLSConfig = letsEncryptConfig(hosts)
 		certFile = ""
 		keyFile = ""
@@ -75,7 +75,9 @@ func startProxy() {
 					break
 				}
 			}
-			if (!foundProcess) {return}
+			if !foundProcess {
+				return
+			}
 
 			//invoke plugin
 			pluginData, ok := invokePlugin(*requestProcess.Project)
@@ -91,34 +93,34 @@ func startProxy() {
 			requiresAuth := false
 			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) { //enroll new user
 				var rand = rand.Float64() * 100
-					dplymnt := requestProcess.Project.Deployments
-	
-					for index, deployment := range dplymnt {
-						if deployment.Type != "test" {
-							continue
-						}
-	
-						var lastDeployment float64
-						if index != 0 {
-							lastDeployment = float64(dplymnt[index-1].Enrollment)
-						} else {
-							lastDeployment = -1
-						}
-	
-						if rand > lastDeployment && rand < float64(deployment.Enrollment) {
-							chnl = deployment.Branch
-						}
+				dplymnt := requestProcess.Project.Deployments
+
+				for index, deployment := range dplymnt {
+					if deployment.Type != "test" {
+						continue
 					}
-	
-					if chnl == "" {
-						chnl = "prod"
+
+					var lastDeployment float64
+					if index != 0 {
+						lastDeployment = float64(dplymnt[index-1].Enrollment)
+					} else {
+						lastDeployment = -1
 					}
-					ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
-					r.Out = r.Out.WithContext(ctx)
+
+					if rand > lastDeployment && rand < float64(deployment.Enrollment) {
+						chnl = deployment.Branch
+					}
+				}
+
+				if chnl == "" {
+					chnl = "prod"
+				}
+				ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
+				r.Out = r.Out.WithContext(ctx)
 			} else {
 				for _, dpl := range requestProcess.Project.Deployments {
 					if dpl.Branch == _ch.Value {
-						if (dpl.Type == "dev") {
+						if dpl.Type == "dev" {
 							requiresAuth = true
 						}
 						chnl = _ch.Value
@@ -127,7 +129,7 @@ func startProxy() {
 				}
 
 				if chnl == "" {
-					if (_ch.Value != "prod") {
+					if _ch.Value != "prod" {
 						warnctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Specified channel not found, now enrolled on prod.")
 						warnctx = context.WithValue(warnctx, rayUtilIcon, "warn")
 						r.Out = r.Out.WithContext(warnctx)
@@ -136,19 +138,19 @@ func startProxy() {
 				}
 			}
 
-			if (requiresAuth) {
+			if requiresAuth {
 				token, err := r.In.Cookie("ray-auth")
 
-				if (err != nil || token.Valid() != nil) {
+				if err != nil || token.Valid() != nil {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RequestAuth")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
-				} else if (token.Value != devAuth.Token || !devAuth.Valid) {
+				} else if token.Value != devAuth.Token || !devAuth.Valid {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "AuthError")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
 				} else {
-					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;" + chnl + "&#39;")
+					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;"+chnl+"&#39;")
 					infoctx = context.WithValue(infoctx, rayUtilIcon, "login")
 					r.Out = r.Out.WithContext(infoctx)
 				}
@@ -158,7 +160,7 @@ func startProxy() {
 			tryRoute := func() {
 				for _, process := range processes { //see above for more info
 					if process.Project.Domain == r.In.Host && process.Branch == chnl {
-						if (process.State == "drop") {
+						if process.State == "drop" {
 							existsAsDropped = true
 							continue
 						}
@@ -176,7 +178,7 @@ func startProxy() {
 
 			tryRoute()
 			triedTimes := 0
-			for (!hostFound && existsAsDropped && triedTimes < 600) {
+			for !hostFound && existsAsDropped && triedTimes < 600 {
 				time.Sleep(100 * time.Millisecond)
 				tryRoute()
 				triedTimes += 1
@@ -186,11 +188,11 @@ func startProxy() {
 			r.Header.Add("x-handled-by", "ray")
 
 			if chnl, ok := r.Request.Context().Value(rayChannelKey).(string); ok {
-				r.Header.Add("Set-Cookie", "ray-channel=" + chnl + ";Max-Age=31536000") //expires after 1 year
-				r.Header.Add("Set-Cookie", "ray-enrolled-at=" + strconv.FormatInt(time.Now().Unix(), 10) + ";Max-Age=31536000")
+				r.Header.Add("Set-Cookie", "ray-channel="+chnl+";Max-Age=31536000") //expires after 1 year
+				r.Header.Add("Set-Cookie", "ray-enrolled-at="+strconv.FormatInt(time.Now().Unix(), 10)+";Max-Age=31536000")
 			}
 
-			if (strings.Contains(r.Header.Get("Content-Type"), "text/html")) {
+			if strings.Contains(r.Header.Get("Content-Type"), "text/html") {
 				icon, ok := r.Request.Context().Value(rayUtilIcon).(string)
 				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
 
@@ -198,10 +200,10 @@ func startProxy() {
 				if err != nil {
 					rlog.Fatal(err)
 				}
-				
+
 				bodyStr := string(body)
 				rayutl := ""
-				if (ok && ok2) {
+				if ok && ok2 {
 					rayutl = getRayUtilMessage(message, icon, r.Header)
 				} else {
 					rayutl = getRayUtil(r.Header)
@@ -224,24 +226,24 @@ func startProxy() {
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			errorCode := err.Error()
 			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
-				if (beh == "RequestAuth") {
+				if beh == "RequestAuth" {
 					w.WriteHeader(401)
 					w.Write([]byte(loginPage))
 					return
-				} else if (beh == "AuthError") {
+				} else if beh == "AuthError" {
 					errorCode = "AuthError"
 				}
 			}
 
 			w.Header().Add("Content-Type", "text/html")
 			w.Header().Add("Set-Cookie", "ray-channel=prod")
-			
+
 			content := errorPage
-			
+
 			w.WriteHeader(400)
-			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":")) - 1]]
-			if (errorMsg == "") {
-				rlog.Notify("Sending unknown error: " + errorCode, "err")
+			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":"))-1]]
+			if errorMsg == "" {
+				rlog.Notify("Sending unknown error: "+errorCode, "err")
 				errorMsg = "Unknown error"
 			}
 			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", _version)))
@@ -249,7 +251,7 @@ func startProxy() {
 	}}
 	go startHttpServer(srv)
 	rlog.Notify("Started ray router (http)", "done")
-	if (rconf.TLS.Provider != "") {
+	if rconf.TLS.Provider != "" {
 		var hosts []string
 		for _, project := range rconf.Projects {
 			hosts = append(hosts, project.Domain)

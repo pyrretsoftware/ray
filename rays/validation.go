@@ -18,11 +18,11 @@ func validateConfig(config rayconfig) {
 
 	var domainList []string
 	for _, project := range config.Projects {
-		if (!project.ProjectConfig.NotWebsite) {
-			if (project.Domain == "") {
+		if !project.ProjectConfig.NotWebsite {
+			if project.Domain == "" {
 				rlog.Fatal("Fatal rayconfig error: a project must specify a domain.")
 			}
-			if (!slices.Contains(domainList, project.Domain)) {
+			if !slices.Contains(domainList, project.Domain) {
 				domainList = append(domainList, project.Domain)
 			} else {
 				rlog.Fatal("Fatal rayconfig error: two projects cannot reside on the same domain.")
@@ -36,7 +36,7 @@ func validateDeployments(deployments []deployment) {
 	for _, deployment := range deployments {
 		if deployment.Type == "" {
 			rlog.Fatal("Fatal rayconfig error: one of the specified deployments have no type specified.")
-		} else if (!slices.Contains(deploymentTypes, deployment.Type)) {
+		} else if !slices.Contains(deploymentTypes, deployment.Type) {
 			rlog.Fatal("Fatal rayconfig error: one of the specifed deployments has a deployment type that's not valid.")
 		}
 
@@ -57,7 +57,7 @@ func validateDeployments(deployments []deployment) {
 }
 
 func validateProjectConfig(projectConfig projectConfig, project project) {
-	if (projectConfig.NotWebsite) {
+	if projectConfig.NotWebsite {
 		if project.Domain != "" {
 			rlog.Fatal("Fatal projectconfig error: project that's not a website cannot have a domain defined.")
 		}
@@ -81,12 +81,12 @@ func validateProjectConfig(projectConfig projectConfig, project project) {
 			alwaysRanDeploySteps += 1
 		}
 
-		if (step.Type != "deploy" && step.Type != "build") {
+		if step.Type != "deploy" && step.Type != "build" {
 			rlog.Fatal("Fatal projectconfig error: only valid pipeline step types are 'deploy' and 'build'.")
 		}
 	}
 
-	if (alwaysRanDeploySteps > 1) {
+	if alwaysRanDeploySteps > 1 {
 		rlog.Fatal("Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be ran.")
 	}
 }

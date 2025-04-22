@@ -1,20 +1,20 @@
 package main
 
 type deployment struct {
-	Branch string
-	Type string
+	Branch     string
+	Type       string
 	Enrollment int
 }
 
 type project struct {
-	Src string
-	Name string
-	EnvVars map[string]string
-	Domain string
-	Deployments []deployment
+	Src                  string
+	Name                 string
+	EnvVars              map[string]string
+	Domain               string
+	Deployments          []deployment
 	PluginImplementation string
-	Options map[string]string
-	ProjectConfig projectConfig
+	Options              map[string]string
+	ProjectConfig        projectConfig
 }
 
 type auth struct {
@@ -27,7 +27,7 @@ type raydata struct {
 }
 
 type tlsConfig struct {
-	Provider string //enum, possile vals are "letsencrypt" and "custom". 
+	Provider string //enum, possile vals are "letsencrypt" and "custom".
 }
 
 type gitAuth struct {
@@ -36,54 +36,54 @@ type gitAuth struct {
 }
 
 type rayconfig struct {
-	Projects []project
+	Projects          []project
 	ForcedRenrollment int64
-	TLS tlsConfig
-	EnableRayUtil bool
-	GitAuth gitAuth
+	TLS               tlsConfig
+	EnableRayUtil     bool
+	GitAuth           gitAuth
 }
 
 type pipelineOptions struct {
-	Dir string //directory to run command in
-	IfAvailable bool //Whether or the command is optional based on if its available on the current system.
-	EnvVar map[string]string //enviroment variables to pass the command
+	Dir         string            //directory to run command in
+	IfAvailable bool              //Whether or the command is optional based on if its available on the current system.
+	EnvVar      map[string]string //enviroment variables to pass the command
 }
 type pipelineStep struct {
-	Tool string
+	Tool    string
 	Command []string
-	Type string //enum, possible vals are "build" and "deploy"
+	Type    string //enum, possible vals are "build" and "deploy"
 	Options pipelineOptions
 }
 
 type projectConfig struct {
-	Version string
-	Pipeline []pipelineStep
+	Version    string
+	Pipeline   []pipelineStep
 	NotWebsite bool
 }
 
 type statusItem struct {
 	Running bool
-	Text string
+	Text    string
 	Subtext string
 }
 
 type rayStatus struct {
-	Name string
-	Desc string
+	Name         string
+	Desc         string
 	EverythingUp bool
-	Processes []statusItem
+	Processes    []statusItem
 }
 
 type process struct {
-	Project *project
-	Env string
-	Ghost bool
-	Port int
+	Project   *project
+	Env       string
+	Ghost     bool
+	Port      int
 	Processes []int
-	Active bool
-	State string
-	remove func()
-	Branch string
-	Hash string
-	LogFile string
+	Active    bool
+	State     string
+	remove    func()
+	Branch    string
+	Hash      string
+	LogFile   string
 }

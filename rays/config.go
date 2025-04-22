@@ -8,13 +8,13 @@ import (
 func applyChanges(_config rayconfig) error {
 	config, err := json.MarshalIndent(_config, "", "    ")
 	if err != nil {
-		rlog.Notify("Cant format config file: " + err.Error(), "err")
+		rlog.Notify("Cant format config file: "+err.Error(), "err")
 		return err
 	}
 
-	err2 := os.WriteFile(dotslash + "/rayconfig.json", config, 0666)
+	err2 := os.WriteFile(dotslash+"/rayconfig.json", config, 0666)
 	if err2 != nil {
-		rlog.Notify("Cant apply config changes: " + err2.Error(), "err")
+		rlog.Notify("Cant apply config changes: "+err2.Error(), "err")
 		return err
 	}
 	return nil

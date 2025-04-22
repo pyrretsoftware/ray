@@ -21,32 +21,32 @@ func formatProcessList(process process) string {
 	var state string
 	if process.Ghost {
 		state = " 👻"
-	} else if (process.Active) {
-		state = " ✅ (" + process.State + ")" 
+	} else if process.Active {
+		state = " ✅ (" + process.State + ")"
 	} else {
 		state = " ❌ (error)"
 	}
 	var content = process.Project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
 
 	for indx, process := range process.Processes {
-		content += "\n- PID (process " + strconv.Itoa(indx + 1) + "): "+ strconv.Itoa(process)
+		content += "\n- PID (process " + strconv.Itoa(indx+1) + "): " + strconv.Itoa(process)
 	}
 
-	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
-	content += "\n- Log file: "+ process.LogFile
-	content += "\n- Enviroument: "+ process.Env
-	content += "\n- Hash: "+ process.Hash
-	content += "\n- Deployment: "+ process.Branch
+	content += "\n- Internal Port: " + strconv.Itoa(process.Port)
+	content += "\n- Log file: " + process.LogFile
+	content += "\n- Enviroument: " + process.Env
+	content += "\n- Hash: " + process.Hash
+	content += "\n- Deployment: " + process.Branch
 
 	return content
 }
 
 func handleCommand(args []string) {
-	switch (args[1]) {
+	switch args[1] {
 	case "list":
 		var response []process
 		err := json.Unmarshal(cliSendCommand("LISTPROCESS", nil), &response)
-		if (err != nil) {
+		if err != nil {
 			log.Fatal(err)
 		}
 
@@ -56,7 +56,7 @@ func handleCommand(args []string) {
 	case "reload":
 		rlog.Println("Reloading processes")
 		data := cliSendCommand("RELOAD", nil)
-		if (string(data) == "success\n") {
+		if string(data) == "success\n" {
 			rlog.Notify("Reloaded successfully.", "done")
 			os.Exit(0)
 		} else {
@@ -66,7 +66,7 @@ func handleCommand(args []string) {
 	case "force-renrollment":
 		rlog.Println("Forcing a renrollment onto all users who were enrolled into a channel before this point...")
 		data := cliSendCommand("FORCE_RE", nil)
-		if (string(data) == "\n") {
+		if string(data) == "\n" {
 			rlog.Notify("Applied changed to config.", "done")
 		} else {
 			rlog.Fatal("Failed applying changes to config.")
@@ -75,16 +75,16 @@ func handleCommand(args []string) {
 		rlog.Println("Exiting...")
 		data := cliSendCommand("STOP", nil)
 
-		if (string(data) == "\n") {
+		if string(data) == "\n" {
 			rlog.Notify("Exited!", "done")
 		}
 		os.Exit(0)
 	case "dev-auth":
 		rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
-		
+
 		var response auth
 		err := json.Unmarshal(cliSendCommand("GETDEVAUTH", nil), &response)
-		if (err != nil) {
+		if err != nil {
 			log.Fatal(err)
 		}
 
@@ -97,7 +97,7 @@ func handleCommand(args []string) {
 		nano.Stdin = os.Stdin
 
 		err := nano.Run()
-		if (err == exec.ErrNotFound) {
+		if err == exec.ErrNotFound {
 			fmt.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
 			fmt.Println(path.Join(dotslash, "rayconfig.json"))
 		} else {
@@ -127,7 +127,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 		err := applyChanges(*rconf)
 
 		var data string
-		if (err == nil) {
+		if err == nil {
 			return []byte("")
 		} else {
 			data = err.Error()
@@ -175,7 +175,9 @@ func cliSendCommand(command string, args []string) []byte {
 		log.Fatal("Failed to send command: " + err.Error())
 	}
 
-	if (command == "STOP") {return []byte("\n")}
+	if command == "STOP" {
+		return []byte("\n")
+	}
 	buffer := make([]byte, 4096)
 	_command := make([]byte, 0)
 	for {
