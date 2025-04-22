@@ -1,4 +1,4 @@
-module pyrret.axell.me/rays
+module pyrret.com/rays
 
 go 1.23.5
 toolchain go1.24.1
