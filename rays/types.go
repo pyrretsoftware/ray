@@ -87,3 +87,13 @@ type process struct {
 	Hash string
 	LogFile string
 }
+type logFile struct {
+	Success bool
+	Name string
+	Steps []logSection
+}
+type logSection struct {
+	Name string
+	Log string
+	Success bool
+}

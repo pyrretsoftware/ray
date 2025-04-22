@@ -97,6 +97,15 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 	rconf.Projects = newProjects
 }
 
+func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, s bool) {
+	logBuffer.WriteString("\nFinishing logging for this step\n")
+	file.Steps = append(file.Steps, logSection{
+		Name: step.Tool + " (Step " + strconv.Itoa(si) + ")",
+		Success: s,
+		Log: logBuffer.String(),
+	})
+}
+
 func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
@@ -115,22 +124,21 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	validateProjectConfig(config, *project)
 	project.ProjectConfig = config
 
-	logFile := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".txt")
-	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE, 0600)
-	if err != nil {
-		rlog.Fatal("Failed writing to log file.")
-	}
+	logPath := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".json")
+	var logFile logFile 
 
 	process.Project = project
 	process.Env = envDir
 	process.Active = true
 	process.State = "OK"
-	process.LogFile = logFile
+	process.LogFile = logPath
 	if (!config.NotWebsite) {
 		process.Port = pickPort()
 	}
 	
 	for stepIndex, step := range config.Pipeline {
+		var logBuffer strings.Builder //implements io.Writer
+
 		BuiltIntool := builtIn(step)
 		commandDir := dir
 		if (step.Options.Dir != "") {
@@ -140,6 +148,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		if (BuiltIntool == "rayserve" && !config.NotWebsite) {
 			(*swapfunction)()
 			staticServer(commandDir, process.Port, &process)
+			finishLogSection(&logBuffer, &logFile, stepIndex, step, true)
 			continue
 		}
 
@@ -148,7 +157,8 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			_, err := exec.LookPath(step.Tool)
 			if (err != nil && errLocal != nil) {
 				rlog.Println("Command " + step.Tool + " is not available on this system. Skipping...")
-				f.WriteString("")
+				logBuffer.WriteString("Command " + step.Tool + " is not available on this system. Skipping...\n")
+				finishLogSection(&logBuffer, &logFile, stepIndex, step, true)
 				continue
 			}
 		} 
@@ -185,24 +195,17 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			(*swapfunction)()
 		}
 
-		if (step.Type == "build") {
-			f.WriteString("--------------------------------------------\n")
-			f.WriteString("Next step:\n")
-			f.WriteString("--------------------------------------------\n")
-			cmd.Stdout = f
-		} else if (step.Type == "deploy") {
-			f.Close()
-		}
-		var stdoutBuffer strings.Builder //implements io.Writer
-		cmd.Stdout = &stdoutBuffer
-		cmd.Stderr = &stdoutBuffer
+		cmd.Stdout = &logBuffer
+		cmd.Stderr = &logBuffer
 
 		commandError := cmd.Start()
 		
 		if step.Type == "build" {
 			commandError = cmd.Wait()
+			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
 		} else {
 			time.Sleep(2000 * time.Millisecond)
+			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
 		}
 
 		if (commandError != nil) {
@@ -211,7 +214,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			} else {
 				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch +", step " + strconv.Itoa((stepIndex + 1)) + "), is there an issue with your command?", "err")
 				rlog.BuildNotify("Output:", "err")
-				fmt.Println(stdoutBuffer.String())
+				fmt.Println(logBuffer.String())
 			}
 			process.Active = false
 			process.State = commandError.Error()
@@ -219,7 +222,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
 				process.Processes = append(process.Processes, cmd.Process.Pid)
-				go trackProcess(cmd, &process, &stdoutBuffer)
+				go trackProcess(cmd, &process, &logBuffer)
 
 				if (config.NotWebsite) {break}
 				ports := getProcessPorts(cmd.Process.Pid)
@@ -237,12 +240,24 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 			}
 		}
 	}
+
+	logFile.Name = project.Name + " (branch " + branch + ")"
 	if (process.Active && process.State == "OK") {
 		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
+		logFile.Success = true
 	} else {
 		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
+		logFile.Success = false
 	}
-
+	logB, err := json.Marshal(logFile)
+	if err != nil {
+		rlog.Println("Failed encoding log file.")
+	} else {
+		err := os.WriteFile(logPath, logB, 0600)
+		if err != nil {
+			rlog.Println("Failed writing log file.")
+		}
+	}
 	processes = append(processes, &process)
 }
 

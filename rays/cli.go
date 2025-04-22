@@ -51,7 +51,7 @@ func handleCommand(args []string) {
 		}
 
 		for _, process := range response {
-			rlog.Println(formatProcessList(process))
+			fmt.Println(formatProcessList(process))
 		}
 	case "reload":
 		rlog.Println("Reloading processes")
@@ -98,11 +98,13 @@ func handleCommand(args []string) {
 
 		err := nano.Run()
 		if (err == exec.ErrNotFound) {
-			fmt.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
-			fmt.Println(path.Join(dotslash, "rayconfig.json"))
+			rlog.Println("Tried opening config file with nano, but it dosen't appear to be installed. Please install it or open the following file with another editor:")
+			rlog.Println(path.Join(dotslash, "rayconfig.json"))
 		} else {
 			rlog.Notify("Exited nano without error", "done")
 		}
+	default:
+		rlog.Fatal("Command not found")
 	}
 }
 
@@ -155,8 +157,8 @@ func cliSendCommand(command string, args []string) []byte {
 
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
-		fmt.Println("Failed connecting to rays, it may not have finished initalization or it may not be started at all.")
-		fmt.Println("Tip: try running with sudo/with elevated permissions")
+		rlog.Println("Failed connecting to rays, it may not have finished initalization or it may not be started at all.")
+		rlog.Println("Tip: try running with sudo/with elevated permissions")
 	}
 	defer conn.Close()
 
