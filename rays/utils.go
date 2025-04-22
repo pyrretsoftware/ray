@@ -25,17 +25,18 @@ func makeGhost(process *process) {
 func pickPort() int {
 	port := rand.IntN(16383) + 49152
 
-	ln, err := net.Listen("tcp", ":" + strconv.Itoa(port))
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		return pickPort()
 	}
-  
+
 	ln.Close()
 	rlog.Println("Using available port " + strconv.Itoa(port) + ".")
 	return port
 }
 
 var dotslash string = ""
+
 func assignDotSlash() {
 	exc, err := os.Executable()
 	if err != nil {
@@ -47,7 +48,7 @@ func assignDotSlash() {
 
 func getProcessFromBranch(branch string, project project) *process {
 	for _, process := range processes {
-		if (process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop") {
+		if process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop" {
 			return process
 		}
 	}

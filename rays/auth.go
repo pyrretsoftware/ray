@@ -13,13 +13,13 @@ var devAuth *auth = &auth{
 
 func generateAuth() {
 	_pass := make([]byte, 24)
-	
+
 	_, err := rand.Read(_pass)
 	if err != nil {
 		rlog.Notify("Could not generate authentication.", "warn")
 		return
 	}
-	
+
 	devAuth = &auth{
 		Token: hex.EncodeToString(_pass),
 		Valid: true,
@@ -29,7 +29,7 @@ func generateAuth() {
 
 func invalidateAuth(token string) {
 	time.Sleep(10 * time.Minute)
-	if (devAuth.Token == token) {
+	if devAuth.Token == token {
 		devAuth.Valid = false
 	}
 }
