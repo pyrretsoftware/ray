@@ -15,7 +15,7 @@ func main() {
 		rlog.Fatal("No arguments passed!")
 	}
 
-	if (os.Args[1] == "--daemon") {
+	if (os.Args[1] == "daemon") {
 		rlog.Println("Ray server daemon launched.")
 		rlog.Println("Setting up ray enviroument...")
 		

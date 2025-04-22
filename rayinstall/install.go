@@ -121,7 +121,7 @@ After=network.target
 [Service]
 User=${User}
 Restart=always
-ExecStart=${BinaryPath} --daemon
+ExecStart=${BinaryPath} daemon
 ExecReload=${BinaryPath} reload
 ExecStop=${BinaryPath} stop
 
