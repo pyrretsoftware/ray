@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -41,11 +42,21 @@ func formatProcessList(process process) string {
 	return content
 }
 
+func RrayFormat(json []byte) {
+	if os.Args[2] == "-rray" {
+		fmt.Println(string(json))
+		os.Exit(0)
+	}
+}
+
 func handleCommand(args []string) {
 	switch (args[1]) {
 	case "list":
+		jsonRes := cliSendCommand("LISTPROCESS", nil)
+		RrayFormat(jsonRes)
+
 		var response []process
-		err := json.Unmarshal(cliSendCommand("LISTPROCESS", nil), &response)
+		err := json.Unmarshal(jsonRes, &response)
 		if (err != nil) {
 			log.Fatal(err)
 		}
@@ -80,10 +91,15 @@ func handleCommand(args []string) {
 		}
 		os.Exit(0)
 	case "dev-auth":
-		rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
+		if !*flag.Bool("rray", false, "use rray formatting") {
+			rlog.Println("Generating new credentials for development channels... (all old credentials will be invalidated)")
+		}
 		
+		jsonRes := cliSendCommand("GETDEVAUTH", nil)
+		RrayFormat(jsonRes)
+
 		var response auth
-		err := json.Unmarshal(cliSendCommand("GETDEVAUTH", nil), &response)
+		err := json.Unmarshal(jsonRes, &response)
 		if (err != nil) {
 			log.Fatal(err)
 		}
