@@ -43,7 +43,7 @@ func formatProcessList(process process) string {
 }
 
 func RrayFormat(json []byte) {
-	if os.Args[2] == "-rray" {
+	if os.Args[2] == "rray" {
 		fmt.Println(string(json))
 		os.Exit(0)
 	}

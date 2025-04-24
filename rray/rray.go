@@ -55,7 +55,7 @@ func main() {
 			  Flags: []cli.Flag{&remoteFlag},
 			  Action: func(ctx *cli.Context) error {
 				validateRemote(ctx.String("remote"))
-				fmt.Println(getOutput("sudo rays list", ctx.String("remote")))
+				fmt.Println(formatList(getOutput("sudo rays list rray", ctx.String("remote"))))
 				return nil
 			  },
 		  },
