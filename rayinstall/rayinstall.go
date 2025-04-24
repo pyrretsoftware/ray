@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 
@@ -148,6 +149,9 @@ func main() {
 				Aliases: []string{"i"},
 				Usage: "install an installation package",
 				Action: func(ctx *cli.Context) error {
+					if ctx.Args().First() == "" {
+						log.Fatal("Please provide an installation package to install, usually build.rpack")
+					}
 					packFile, err := os.ReadFile(ctx.Args().First())
 					if (err != nil) {
 						fmt.Println(err)

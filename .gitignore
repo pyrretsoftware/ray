@@ -6,3 +6,5 @@ rays/rays
 rays/rays.exe
 rays/clisocket.sock
 rays/ray-env
+rray/hosts.json
+rray/rray
