@@ -20,14 +20,14 @@ func validateRemote(remote string) {
 	}
 }
 
+var listProp = lipgloss.NewStyle().Foreground(lipgloss.Color("32")).Bold(true)
+var listStyle = lipgloss.NewStyle().
+	PaddingLeft(1).
+	PaddingRight(1).
+	Border(lipgloss.RoundedBorder())
+
 func main() {	
 	readHostsFile()
-	var listProp = lipgloss.NewStyle().Foreground(lipgloss.Color("32")).Bold(true)
-	var listStyle = lipgloss.NewStyle().
-		PaddingLeft(1).
-		PaddingRight(1).
-		Border(lipgloss.RoundedBorder())
-
 	remoteFlag := cli.StringFlag{
 		Name: "remote",
 		Aliases: []string{"r"},
@@ -55,7 +55,7 @@ func main() {
 			  Flags: []cli.Flag{&remoteFlag},
 			  Action: func(ctx *cli.Context) error {
 				validateRemote(ctx.String("remote"))
-				fmt.Println(formatList(getOutput("sudo rays list rray", ctx.String("remote"))))
+				fmt.Println(formatList(getOutputSpin("sudo rays list rray", ctx.String("remote"))))
 				return nil
 			  },
 		  },

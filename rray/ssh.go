@@ -11,8 +11,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/huh/spinner"
 	"golang.org/x/crypto/ssh"
 )
+
+func getOutputSpin(command string, remote string) string {
+	var out string
+	action := func ()  {
+		out = getOutput(command, remote)
+	}
+	spinner.New().Title("Contacting server...").Action(action).Run()
+
+	return out
+}
 
 func getOutput(command string, remote string) string {
 	authMethods := getAuthMethods(remote)
