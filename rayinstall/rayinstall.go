@@ -35,7 +35,7 @@ func main() {
   		Name: "rayinstall",
   		Usage: "create and use ray installation packages",
 		Description: "utility for creating, unpacking and installing ray installation packages",
-		Version: "1.0.0",
+		Version: "1.0.1",
 		Authors: []*cli.Author{
 			{
 				Name: "axell",
