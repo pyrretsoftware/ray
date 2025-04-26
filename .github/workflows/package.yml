@@ -38,7 +38,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           cd rays
-          go build -o rays
+          go build -o rays -ldflags "-X 'main.Version=$(cat version)'"
           
           # Copy rays binary to rayinstall directory
           cp rays ../rayinstall/
