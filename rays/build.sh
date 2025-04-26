@@ -1,0 +1,1 @@
+go build -ldflags "-X 'main.Version=$(cat version)'"

@@ -244,7 +244,7 @@ func startProxy() {
 				rlog.Notify("Sending unknown error: " + errorCode, "err")
 				errorMsg = "Unknown error"
 			}
-			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", _version)))
+			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", Version)))
 		},
 	}}
 	go startHttpServer(srv)

@@ -43,7 +43,6 @@ func assignDotSlash() {
 	}
 
 	dotslash = path.Join(path.Dir(exc), "ray-env")
-	rlog.Println("Debugging notice: now assigned dotslash to " + dotslash)
 }
 
 func getProcessFromBranch(branch string, project project) *process {

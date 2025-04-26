@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-var _version = "v1.0.0"
+var Version = "unknown"
 
 func main() {
 	if (!checkPerms()) {

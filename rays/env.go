@@ -214,7 +214,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		
 		buildErr := func (message string)  {
 			rlog.BuildNotify(message, "err")
-			logBuffer.Write([]byte(message))
+			logBuffer.Write([]byte(message + "\n"))
 		}
 
 		if (commandError != nil || (step.Type == "deploy" && deployProcessExited)) {

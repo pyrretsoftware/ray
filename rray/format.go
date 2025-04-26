@@ -64,18 +64,18 @@ func formatList(output string) string {
 		} else {
 			state = " ❌ (error)"
 		}
+		envPath := strings.Split(process["Env"].(string), "/")
+		envPath[len(envPath)-1] = linkStyle.Render(envPath[len(envPath)-1])
 
 		fmt.Println(listStyle.Render(
 			listProp.Render(process["Project"].(map[string]any)["Name"].(string) + state + "\n"),
 			listProp.Render("\nInternal Port: ") + strconv.Itoa(int(process["Port"].(float64))),
 			listProp.Render("\nLog file: ") + process["LogFile"].(string),
-			listProp.Render("\nEnviroument: ") + process["Env"].(string),
+			listProp.Render("\nEnviroument: ") + strings.Join(envPath, "/"),
 			listProp.Render("\nHash: ") + process["Hash"].(string),
 			listProp.Render("\nDeployment: ") + process["Branch"].(string),
 		))
 	}
-
-
 
 	return ""
 }

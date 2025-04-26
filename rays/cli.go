@@ -63,6 +63,9 @@ func handleCommand(args []string) {
 		} else {
 			log.Fatal("No b64 config provided.")
 		}
+	case "version":
+		fmt.Println(Version)
+		os.Exit(0)
 	case "rray-read-config":
 		fmt.Println(string(readConfigRaw()))
 	case "list":
