@@ -27,7 +27,7 @@ func applyChangesRaw(config []byte) error {
 func readConfigRaw() []byte {
 	_config, err := os.ReadFile(path.Join(dotslash, "rayconfig.json"))
 	if err != nil {
-		rlog.Fatal(err)
+		rlog.Fatal("Failed reading rayconfig: " + err.Error())
 	}
 	return _config
 }
@@ -41,14 +41,3 @@ func readConfig() rayconfig {
 
 	return config
 }
-
-var defaultConfig string = `{
-    "EnableRayUtil" : true,
-    "Projects": [
-        {
-            "Name": "ray demo",
-            "Src": "https://github.com/pyrretsoftwarelabs/ray-demo",
-            "Domain": "localhost"
-        }
-    ]
-}`
