@@ -8,9 +8,6 @@ on:
     branches:
       - main
 
-env:
-  PROJECT_ROOT: ./rays
-
 jobs:
   build:
     name: build
@@ -40,32 +37,15 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          cd $PROJECT_ROOT
-          OUTPUT_NAME="rays"
-          if [ "$GOOS" = "windows" ]; then
-            OUTPUT_NAME+=".exe"
-          fi
-          mkdir -p ../dist
-          go build -o ../dist/$OUTPUT_NAME .
-          cp bin-readme.txt ../dist/readme.txt
-          cd ..
+          cd rays
+          go build -o rays
           
           # Copy rays binary to rayinstall directory
-          cp dist/$OUTPUT_NAME rayinstall/
+          cp rays ../rayinstall/
           
-          # Create metadata.json
-          RAY_VERSION=$(cat rays/version)
-          echo "{\"RayVersion\":\"$RAY_VERSION\",\"Platform\":\"$GOOS\"}" > rayinstall/metadata.json
-      
-      - name: Build rayinstall for runner
-        run: |
-          cd rayinstall
-          go build -o rayinstall .
-          
-      - name: Create installation package
-        run: |
-          cd rayinstall
-          ./rayinstall package
+          # Create version
+          RAY_VERSION=$(cat version)
+          echo "$RAY_VERSION" > ../rayinstall/version
           
       - name: Build rayinstall for target platform
         env:
@@ -79,21 +59,8 @@ jobs:
           fi
           go build -o $OUTPUT_NAME .
           
-      - name: Package files
-        run: |
-          mkdir -p dist-package
-          cd rayinstall
-          cp build.rpack ../dist-package/
-          cp rayinstall ../dist-package/
-          
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist-package/*
-          
-      - name: Upload Original rays Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: rays-${{ matrix.goos }}-${{ matrix.goarch }}-bin
-          path: dist/*
+          name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          path: rayinstall/rayinstall${{ matrix.goos == 'windows' && '.exe' || '' }}

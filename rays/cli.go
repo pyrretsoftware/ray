@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -50,8 +51,48 @@ func RrayFormat(json []byte) {
 	}
 }
 
+func removeComponent(dir string) {
+	if comp, err := os.Stat(dir); err == nil {
+		rlog.Println("Removing " + dir)
+
+		rmfunc := os.Remove
+		if (comp.IsDir()) {
+			rmfunc = os.RemoveAll
+		}
+		err := rmfunc(dir)
+		if (err != nil) {
+			rlog.Fatal("Couldn't remove component: " + err.Error())
+		}
+	} else {
+		rlog.Notify("Component " + dir +" not found, ray might not have been properly installed.", "warn")
+	}
+}
+
 func handleCommand(args []string) {
 	switch (args[1]) {
+	case "uninstall":
+		rlog.Println("Uninstalling rays")
+		fileEnding := ""
+		if (runtime.GOOS == "windows") {
+			fileEnding = ".exe"
+		}
+
+		installLocation := "/usr/bin"
+		if runtime.GOOS == "windows" {
+			dir, err := os.UserHomeDir()
+			if err != nil {
+				rlog.Fatal(err)
+			}
+			installLocation = dir
+		}
+	
+		if (runtime.GOOS == "linux") {
+			exec.Command("systemctl", "stop", "rays").Run()
+			removeComponent("/etc/systemd/system/rays.service")
+		}
+		removeComponent(path.Join(installLocation, "rays" + fileEnding))
+		removeComponent(path.Join(installLocation, "ray-env"))
+		
 	case "rray-edit-config":
 		if len(os.Args) > 2 {
 			ba, err := base64.RawStdEncoding.DecodeString(os.Args[2])
