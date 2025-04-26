@@ -54,7 +54,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           cd rayinstall
-          OUTPUT_NAME="rayinstall"
+          OUTPUT_NAME="rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "$GOOS" = "windows" ]; then
             OUTPUT_NAME+=".exe"
           fi
@@ -63,5 +63,4 @@ jobs:
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
-          path: rayinstall/rayinstall${{ matrix.goos == 'windows' && '.exe' || '' }}
+          path: rayinstall/rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
