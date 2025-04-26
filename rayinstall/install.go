@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -40,11 +39,7 @@ func registerDaemon(path string) {
 	systemdRegisterDaemon(daemon)	
 }
 
-func installPack(pack inPack) {
-	if pack.Metadata.Platform != runtime.GOOS {
-		log.Fatal("Installation package os dosen't match this OS")
-	}
-
+func installPack(raysBin []byte) {
 	installLocation := "/usr/bin"
 	if runtime.GOOS == "windows" {
 		dir, err := os.UserHomeDir()
@@ -59,6 +54,7 @@ func installPack(pack inPack) {
 		log.Println("Rays is already installed, updating...")
 
 		if (runtime.GOOS == "linux") {
+			log.Println("Stopping rays...")
 			exec.Command("systemctl", "stop", "rays").Run()
 		}
 	} else {
@@ -71,49 +67,11 @@ func installPack(pack inPack) {
 		}
 	}
 
-	for _, file := range pack.Binaries {
-		blob, err := base64.StdEncoding.DecodeString(file.Blob)
-		if (err != nil) {
-			log.Fatal(err)
-		}
-		os.WriteFile(path.Join(installLocation, file.Name), blob, 0667)
-	}
+	os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0600)
+	
 	registerDaemon(path.Join(installLocation, "rays" + fileEnding))
 }
-func removeComponent(dir string) {
-	if comp, err := os.Stat(dir); err == nil {
-		log.Println("Removing " + dir)
 
-		rmfunc := os.Remove
-		if (comp.IsDir()) {
-			rmfunc = os.RemoveAll
-		}
-		err := rmfunc(dir)
-		if (err != nil) {
-			log.Fatal("Couldnt remove component: ", err)
-		}
-	} else {
-		log.Fatal("Component " + dir +" not found, ray might not have been properly installed.")
-	}
-}
-
-func uninstall() {
-	installLocation := "/usr/bin"
-	if runtime.GOOS == "windows" {
-		dir, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatal(err)
-		}
-		installLocation = dir
-	}
-
-	if (runtime.GOOS == "linux") {
-		exec.Command("systemctl", "stop", "rays").Run()
-		removeComponent("/etc/systemd/system/rays.service")
-	}
-	removeComponent(path.Join(installLocation, "rays" + fileEnding))
-	removeComponent(path.Join(installLocation, "ray-env"))
-}
 var systemdService string = `[Unit]
 Description=ray server (rays)
 After=network.target

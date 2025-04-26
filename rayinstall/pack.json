@@ -1,0 +1,12 @@
+{
+    "Metadata" : {
+        "RayVersion" : "1.0.1",
+        "Platform" : "linux"
+    },
+    "Binaries" : [
+        {
+            "Name" : "rays",
+            "Blob" : ""
+        }
+    ]
+}
