@@ -67,7 +67,10 @@ func installPack(raysBin []byte) {
 		}
 	}
 
-	os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0667)
+	err := os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0667)
+	if err != nil {
+		log.Fatalf("Failed to write rays binary to %s: %v", path.Join(installLocation, "rays" + fileEnding), err)
+	}
 	
 	registerDaemon(path.Join(installLocation, "rays" + fileEnding))
 }
