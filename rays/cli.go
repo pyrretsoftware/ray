@@ -61,7 +61,7 @@ func removeComponent(dir string) {
 		}
 		err := rmfunc(dir)
 		if (err != nil) {
-			rlog.Fatal("Couldnt remove component: " + err.Error())
+			rlog.Fatal("Couldn't remove component: " + err.Error())
 		}
 	} else {
 		rlog.Notify("Component " + dir +" not found, ray might not have been properly installed.", "warn")
