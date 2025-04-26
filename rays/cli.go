@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -43,7 +44,7 @@ func formatProcessList(process process) string {
 }
 
 func RrayFormat(json []byte) {
-	if os.Args[2] == "rray" {
+	if len(os.Args) > 2 && os.Args[2] == "rray" {
 		fmt.Println(string(json))
 		os.Exit(0)
 	}
@@ -51,6 +52,19 @@ func RrayFormat(json []byte) {
 
 func handleCommand(args []string) {
 	switch (args[1]) {
+	case "rray-edit-config":
+		if len(os.Args) > 2 {
+			ba, err := base64.RawStdEncoding.DecodeString(os.Args[2])
+			if err != nil {
+				log.Fatal("Invalid b64 config string")
+			}
+
+			applyChangesRaw(ba)
+		} else {
+			log.Fatal("No b64 config provided.")
+		}
+	case "rray-read-config":
+		fmt.Println(string(readConfigRaw()))
 	case "list":
 		jsonRes := cliSendCommand("LISTPROCESS", nil)
 		RrayFormat(jsonRes)

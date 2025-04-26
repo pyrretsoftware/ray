@@ -1,14 +1,16 @@
 package main
 
 import (
+	"bufio"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,14 +22,14 @@ func validateRemote(remote string) {
 	}
 }
 
-var listProp = lipgloss.NewStyle().Foreground(lipgloss.Color("32")).Bold(true)
-var listStyle = lipgloss.NewStyle().
-	PaddingLeft(1).
-	PaddingRight(1).
-	Border(lipgloss.RoundedBorder())
-
 func main() {	
 	readHostsFile()
+
+	raysBinary := "sudo rays"
+	if runtime.GOOS == "windows" {
+		raysBinary = "%%USERPROFILE%%/rays.exe"
+	}
+
 	remoteFlag := cli.StringFlag{
 		Name: "remote",
 		Aliases: []string{"r"},
@@ -55,9 +57,85 @@ func main() {
 			  Flags: []cli.Flag{&remoteFlag},
 			  Action: func(ctx *cli.Context) error {
 				validateRemote(ctx.String("remote"))
-				fmt.Println(formatList(getOutputSpin("sudo rays list rray", ctx.String("remote"))))
+				fmt.Println(formatList(getOutputSpin(raysBinary + " list rray", ctx.String("remote"))))
 				return nil
 			  },
+		  },
+		  {
+			Name: "reload",
+			Description: "reloads the currently running ray processes on the remote server",
+			Usage: "provide the -r flag to specify the remote server",
+			Flags: []cli.Flag{&remoteFlag},
+			Action: func(ctx *cli.Context) error {
+			  validateRemote(ctx.String("remote"))
+			  fmt.Println(getOutputSpin(raysBinary + " reload rray", ctx.String("remote")))
+			  return nil
+			},
+		  },
+		  {
+			Name: "debug",
+			Description: "debug reports the error a process on the remote server encountered that caused it to fail",
+			Usage: "provide the -r flag to specify the remote server",
+			Flags: []cli.Flag{&remoteFlag, &cli.StringFlag{
+				Name: "process",
+				Aliases: []string{"p"},
+				Usage: "specifies the process to inspect",
+				Required: true,
+			},
+			},
+			Action: func(ctx *cli.Context) error {
+			  validateRemote(ctx.String("remote"))
+			  fmt.Println(handleDebug(getOutputSpin(raysBinary + " list rray", ctx.String("remote")), ctx.String("remote"), ctx.String("process")))
+			  return nil
+			},
+		  },
+		  {
+			Name: "config",
+			Description: "config allows you to edit the remote ray config",
+			Usage: "provide the -r flag to specify the remote server",
+			Flags: []cli.Flag{&remoteFlag},
+			Action: func(ctx *cli.Context) error {
+			  validateRemote(ctx.String("remote"))
+			  
+			  file, err := os.CreateTemp(os.TempDir(), "rayconfig-*.json")
+			  if err != nil {
+				log.Fatal("Failed creating local config file.")
+			  }
+
+			  _, readerr := file.WriteString(getOutputSpin(raysBinary + " rray-read-config", ctx.String("remote")))
+			  if readerr != nil {
+				log.Fatal("Failed copying over config file from remote server.")
+			  }
+
+			  fmt.Println("You may now edit the remote servers configuration using the file located at " + linkStyle.Render(file.Name()))
+			  fmt.Println(greyedOut.Render("s - save changes • d - discard changes"))
+
+			  reader := bufio.NewReader(os.Stdin)
+
+			  for {
+				  response, err := reader.ReadByte()
+				  if err != nil {
+					  log.Fatal(err)
+				  }
+
+				  if response == byte('s') {
+					fmt.Println("Saving changes.")
+					b, err := os.ReadFile(file.Name())
+					if err != nil {
+						log.Fatal("Failed reading local config file.")
+					}
+
+					fmt.Print(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(b), ctx.String("remote") ))
+					fmt.Println("Remember, you'll also need to run " + linkStyle.Render("rray reload") + " for the changes to take effect!")
+					file.Close(); os.Remove(file.Name())
+					return nil
+				  } else if response == byte('d') {
+					fmt.Println("Discarded changes.")
+					file.Close(); os.Remove(file.Name())
+					return nil
+				  }
+			  }
+			},
 		  },
 		  {
 			Name: "remote",

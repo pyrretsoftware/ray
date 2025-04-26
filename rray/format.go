@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 )
 
 func parseJsonArray(data string) []map[string]any {
@@ -17,12 +18,31 @@ func parseJsonArray(data string) []map[string]any {
 	return result
 }
 
+func handleDebug(output string, processName string, remote string) string {
+	var foundProcess map[string]any
+	for _, process := range parseJsonArray(output) {
+		envPath := strings.Split(process["Enviroument"].(string), "/")
+		if envPath[len(envPath)-1] == processName {
+			foundProcess = process
+		}
+	}
+
+	if (foundProcess == nil) {
+		return serror.Render("Process with that name not found.")
+	}
+	if foundProcess["Ghost"].(bool) || foundProcess["Active"].(bool) {
+		return serror.Render("Process is not active or hasen't encountered any errors.")
+	}
+
+	return getOutputSpin("sudo cat " + foundProcess["LogFile"].(string), remote)
+}
+
 func formatList(output string) string {
 	for _, process := range parseJsonArray(output) {
 		var state string
 		if process["Ghost"].(bool) {
 			state = " 👻"
-		} else if (process["Ghost"].(bool)) {
+		} else if (process["Active"].(bool)) {
 			state = " ✅ (" + process["State"].(string) + ")" 
 		} else {
 			state = " ❌ (error)"

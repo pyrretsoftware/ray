@@ -94,15 +94,16 @@ func getOutput(command string, remote string) string {
 		log.Fatal("Failed to start command: ", err)
 	}
 
-	// Send the password followed by a newline
 	_, err = stdin.Write([]byte(hostsFile.StoredHosts[remote].Password + "\n"))
 	if err != nil {
-		log.Fatal("Failed to write password: ", err)
+		log.Fatal("Failed to write to stdin: ", err)
 	}
 
 	err = session.Wait()
 	if err != nil {
+		log.Fatal(outBuf.String())
 		log.Fatal("Command finished with error: ", err)
+
 	}
 
 	return strings.Join(strings.Split(outBuf.String(), "\n")[1:], "\n")

@@ -32,3 +32,12 @@ Foreground(lipgloss.Color("#ff0033"))
 var warning lipgloss.Style = lipgloss.NewStyle().
 Bold(true).
 Foreground(lipgloss.Color("#FF5733"))
+
+var listProp = lipgloss.NewStyle().Foreground(lipgloss.Color("32")).Bold(true)
+var linkStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
+var greyedOut = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080"))
+
+var listStyle = lipgloss.NewStyle().
+	PaddingLeft(1).
+	PaddingRight(1).
+	Border(lipgloss.RoundedBorder())
