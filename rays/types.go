@@ -43,10 +43,16 @@ type rayconfig struct {
 	GitAuth gitAuth
 }
 
+type rayserveRedirect struct {
+	Path string
+	Destination string
+	Temporary bool
+}
 type pipelineOptions struct {
 	Dir string //directory to run command in
 	IfAvailable bool //Whether or the command is optional based on if its available on the current system.
 	EnvVar map[string]string //enviroment variables to pass the command
+	RayserveRedirects []rayserveRedirect
 }
 type pipelineStep struct {
 	Tool string

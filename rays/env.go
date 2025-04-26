@@ -146,7 +146,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 
 		if (BuiltIntool == "rayserve" && !config.NotWebsite) {
 			(*swapfunction)()
-			staticServer(commandDir, process.Port, &process)
+			staticServer(commandDir, process.Port, &process, step.Options.RayserveRedirects)
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, true)
 			continue
 		}
