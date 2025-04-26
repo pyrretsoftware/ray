@@ -120,6 +120,7 @@ After=network.target
 
 [Service]
 User=${User}
+Type=idle
 Restart=always
 ExecStart=${BinaryPath} daemon
 ExecReload=${BinaryPath} reload

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path"
 )
 
 func applyChanges(_config rayconfig) error {
@@ -15,7 +16,7 @@ func applyChanges(_config rayconfig) error {
 }
 
 func applyChangesRaw(config []byte) error {
-	err := os.WriteFile(dotslash + "/rayconfig.json", config, 0666)
+	err := os.WriteFile(path.Join(dotslash, "rayconfig.json"), config, 0666)
 	if err != nil {
 		rlog.Notify("Cant apply config changes: " + err.Error(), "err")
 		return err
@@ -24,7 +25,7 @@ func applyChangesRaw(config []byte) error {
 }
 
 func readConfigRaw() []byte {
-	_config, err := os.ReadFile(dotslash + "/rayconfig.json")
+	_config, err := os.ReadFile(path.Join(dotslash, "rayconfig.json"))
 	if err != nil {
 		rlog.Fatal(err)
 	}
