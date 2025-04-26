@@ -22,3 +22,14 @@ type HostsFile struct {
 	StoredAuth map[string][]StoredAuth
 	StoredHosts map[string]StoredHost
 }
+
+type logFile struct {
+	Success bool
+	Name string
+	Steps []logSection
+}
+type logSection struct {
+	Name string
+	Log string
+	Success bool
+}

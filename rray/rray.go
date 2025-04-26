@@ -73,8 +73,8 @@ func main() {
 			},
 		  },
 		  {
-			Name: "debug",
-			Description: "debug reports the error a process on the remote server encountered that caused it to fail",
+			Name: "logs",
+			Description: "logs returns the log of a process on the remote server",
 			Usage: "provide the -r flag to specify the remote server",
 			Flags: []cli.Flag{&remoteFlag, &cli.StringFlag{
 				Name: "process",
@@ -85,7 +85,7 @@ func main() {
 			},
 			Action: func(ctx *cli.Context) error {
 			  validateRemote(ctx.String("remote"))
-			  fmt.Println(handleDebug(getOutputSpin(raysBinary + " list rray", ctx.String("remote")), ctx.String("remote"), ctx.String("process")))
+			  fmt.Println(handleLogs(getOutputSpin(raysBinary + " list rray", ctx.String("remote")), ctx.String("process"), ctx.String("remote")))
 			  return nil
 			},
 		  },

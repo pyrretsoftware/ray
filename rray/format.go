@@ -18,10 +18,10 @@ func parseJsonArray(data string) []map[string]any {
 	return result
 }
 
-func handleDebug(output string, processName string, remote string) string {
+func handleLogs(output string, processName string, remote string) string {
 	var foundProcess map[string]any
 	for _, process := range parseJsonArray(output) {
-		envPath := strings.Split(process["Enviroument"].(string), "/")
+		envPath := strings.Split(process["Env"].(string), "/")
 		if envPath[len(envPath)-1] == processName {
 			foundProcess = process
 		}
@@ -30,11 +30,28 @@ func handleDebug(output string, processName string, remote string) string {
 	if (foundProcess == nil) {
 		return serror.Render("Process with that name not found.")
 	}
-	if foundProcess["Ghost"].(bool) || foundProcess["Active"].(bool) {
-		return serror.Render("Process is not active or hasen't encountered any errors.")
+	_log := getOutputSpin("sudo cat " + foundProcess["LogFile"].(string), remote)
+
+	var logf logFile
+	err := json.Unmarshal([]byte(_log), &logf)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return getOutputSpin("sudo cat " + foundProcess["LogFile"].(string), remote)
+	style := linkStyle
+	if !logf.Success {
+		style = serror
+	}
+	var steps string
+	for _, step := range logf.Steps {
+		sstyle := linkStyle
+		if !step.Success {
+			sstyle = serror
+		}
+		steps += "\n" +  sstyle.Render(step.Name) + "\n" + listStyle.Render(greyedOut.Render(step.Log))
+	}
+
+	return style.Render(logf.Name) + "\n" + steps
 }
 
 func formatList(output string) string {

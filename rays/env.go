@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math/rand/v2"
 	"os"
@@ -100,7 +99,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, s bool) {
 	logBuffer.WriteString("\nFinishing logging for this step\n")
 	file.Steps = append(file.Steps, logSection{
-		Name: step.Tool + " (Step " + strconv.Itoa(si) + ")",
+		Name: step.Tool + " (Step " + strconv.Itoa(si + 1) + ")",
 		Success: s,
 		Log: logBuffer.String(),
 	})
@@ -199,25 +198,37 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		cmd.Stderr = &logBuffer
 
 		commandError := cmd.Start()
-		
-		if step.Type == "build" {
+		deployProcessExited := false
+
+		if step.Type == "build" && commandError == nil {
 			commandError = cmd.Wait()
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
-		} else {
+		} else if commandError == nil {
 			time.Sleep(2000 * time.Millisecond)
-			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
+			go func () {
+				cmd.Wait()
+				deployProcessExited = true
+			}()
+			time.Sleep(100 * time.Millisecond)
+		}
+		
+		buildErr := func (message string)  {
+			rlog.BuildNotify(message, "err")
+			logBuffer.Write([]byte(message))
 		}
 
-		if (commandError != nil) {
-			if (strings.Contains(commandError.Error(), exec.ErrNotFound.Error())) {
-				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch + "): the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.", "err")
+		if (commandError != nil || (step.Type == "deploy" && deployProcessExited)) {
+			if (commandError != nil && strings.Contains(commandError.Error(), exec.ErrNotFound.Error())) {
+				buildErr("Failed to deploy " + project.Name + " (branch " + branch + "): the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.")
+				process.State = "ToolNotFound"
 			} else {
-				rlog.BuildNotify("Failed to deploy " + project.Name + " (branch " + branch +", step " + strconv.Itoa((stepIndex + 1)) + "), is there an issue with your command?", "err")
-				rlog.BuildNotify("Output:", "err")
-				fmt.Println(logBuffer.String())
+				buildErr("Failed to deploy " + project.Name + " (branch " + branch +", step " + strconv.Itoa((stepIndex + 1)) + "), is there an issue with your command or code?")
+				buildErr("Output:")
+				buildErr(logBuffer.String())
+				process.State = logBuffer.String()
 			}
 			process.Active = false
-			process.State = commandError.Error()
+			finishLogSection(&logBuffer, &logFile, stepIndex, step, false)
 		} else {
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {

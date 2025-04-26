@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,20 @@ var rlog = loggerType{
 	},
 	Fatal: func (s any)  {
 		logwrite(s, "err", "standard")
+		if len(os.Args) > 1 && os.Args[1] == "daemon" {
+			var ba []byte
+			_, isString := s.(string)
+			_, isErr := s.(error)
+			if isErr {
+				ba = []byte(s.(error).Error())
+			} else if isString {
+				ba = []byte(s.(string))
+			} else {
+				ba = []byte("Could not transform error to text, please check crash reason using journalctl or similar.")
+			}
+	
+			os.WriteFile(path.Join(dotslash, "crash.txt"), ba, 0600)
+		}
 		os.Exit(1)
 	},
 	BuildNotify: func (content any, logType string)  {
