@@ -67,7 +67,7 @@ func installPack(raysBin []byte) {
 		}
 	}
 
-	os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0600)
+	os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0667)
 	
 	registerDaemon(path.Join(installLocation, "rays" + fileEnding))
 }
