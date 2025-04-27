@@ -97,7 +97,7 @@ func handleCommand(args []string) {
 		if len(os.Args) > 2 {
 			ba, err := base64.RawStdEncoding.DecodeString(os.Args[2])
 			if err != nil {
-				log.Fatal("Invalid b64 config string")
+				log.Fatal("Invalid b64 config string: " + os.Args[2])
 			}
 
 			applyChangesRaw(ba)

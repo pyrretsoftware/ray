@@ -107,7 +107,7 @@ func main() {
 				log.Fatal("Failed copying over config file from remote server.")
 			  }
 
-			  fmt.Println("You may now edit the remote servers configuration using the file located at " + linkStyle.Render(file.Name()))
+			  fmt.Println("You may now edit the remote server's configuration using the file located at " + linkStyle.Render(file.Name()))
 			  fmt.Println(greyedOut.Render("s - save changes • d - discard changes"))
 
 			  reader := bufio.NewReader(os.Stdin)
@@ -124,8 +124,7 @@ func main() {
 					if err != nil {
 						log.Fatal("Failed reading local config file.")
 					}
-
-					fmt.Print(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(b), ctx.String("remote") ))
+					fmt.Println(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(b), ctx.String("remote") ))
 					fmt.Println("Remember, you'll also need to run " + linkStyle.Render("rray reload") + " for the changes to take effect!")
 					file.Close(); os.Remove(file.Name())
 					return nil
