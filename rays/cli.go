@@ -95,9 +95,9 @@ func handleCommand(args []string) {
 		
 	case "rray-edit-config":
 		if len(os.Args) > 2 {
-			ba, err := base64.RawStdEncoding.DecodeString(os.Args[2])
+			ba, err := base64.StdEncoding.DecodeString(os.Args[2])
 			if err != nil {
-				log.Fatal("Invalid b64 config string: " + os.Args[2])
+				log.Fatal("Invalid b64 config string: " + err.Error())
 			}
 
 			applyChangesRaw(ba)
