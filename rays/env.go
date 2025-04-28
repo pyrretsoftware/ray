@@ -173,9 +173,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		process.remove = func() {
 			makeGhost(&process)
 			err := cmd.Process.Kill()
-			if err != nil {
-				rlog.Notify("Process kill error " + err.Error(), "err")
-			}
+			rerr.Notify("Process kill error " + err.Error(), err)
 		}
 
 		for field, val := range project.EnvVars {
@@ -265,9 +263,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		rlog.Println("Failed encoding log file.")
 	} else {
 		err := os.WriteFile(logPath, logB, 0600)
-		if err != nil {
-			rlog.Println("Failed writing log file.")
-		}
+		rerr.Notify("Failed writing log file.", err)
 	}
 	processes = append(processes, &process)
 }

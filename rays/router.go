@@ -39,10 +39,7 @@ func intParse(val string) int64 {
 
 func startHttpServer(srv *http.Server) {
 	err := srv.ListenAndServe()
-
-	if err != nil {
-		rlog.Notify(err, "err")
-	}
+	rerr.Notify(err.Error(), err)
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
@@ -56,9 +53,7 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 	}
 	err := srv.ListenAndServeTLS(certFile, keyFile)
 
-	if err != nil {
-		rlog.Notify(err, "err")
-	}
+	rerr.Notify(err.Error(), err)
 }
 
 func startProxy() {
@@ -195,9 +190,7 @@ func startProxy() {
 				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
 
 				body, err := io.ReadAll(r.Body)
-				if err != nil {
-					rlog.Fatal(err)
-				}
+				rerr.Fatal(err.Error(), err)
 				
 				bodyStr := string(body)
 				rayutl := ""

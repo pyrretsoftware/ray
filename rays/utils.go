@@ -38,9 +38,7 @@ func pickPort() int {
 var dotslash string = ""
 func assignDotSlash() {
 	exc, err := os.Executable()
-	if err != nil {
-		rlog.Fatal("Cant get current executable: " + err.Error())
-	}
+	rerr.Fatal("Cant get current executable: " + err.Error(), err)
 
 	dotslash = path.Join(path.Dir(exc), "ray-env")
 }

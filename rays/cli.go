@@ -80,9 +80,7 @@ func handleCommand(args []string) {
 		installLocation := "/usr/bin"
 		if runtime.GOOS == "windows" {
 			dir, err := os.UserHomeDir()
-			if err != nil {
-				rlog.Fatal(err)
-			}
+			rerr.Fatal(err.Error(), err)
 			installLocation = dir
 		}
 	
@@ -96,9 +94,7 @@ func handleCommand(args []string) {
 	case "rray-edit-config":
 		if len(os.Args) > 2 {
 			ba, err := base64.StdEncoding.DecodeString(os.Args[2])
-			if err != nil {
-				log.Fatal("Invalid b64 config string: " + err.Error())
-			}
+			rerr.Fatal("Invalid b64 config string: " + err.Error(), err)
 
 			applyChangesRaw(ba)
 		} else {
@@ -186,9 +182,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 	switch command.Command {
 	case "LISTPROCESS":
 		json, err := json.Marshal(processes)
-		if err != nil {
-			log.Println(err)
-		}
+		rerr.Notify(err.Error(), err)
 
 		return append(json, byte('\n'))
 	case "RELOAD":
@@ -216,9 +210,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 	case "GETDEVAUTH":
 		generateAuth()
 		json, err := json.Marshal(devAuth)
-		if err != nil {
-			log.Println(err)
-		}
+		rerr.Notify(err.Error(), err)
 
 		return append(json, byte('\n'))
 	default:
@@ -230,10 +222,8 @@ func cliSendCommand(command string, args []string) []byte {
 	socketPath := dotslash + "/clisocket.sock"
 
 	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		rlog.Println("Failed connecting to rays, it may not have finished initalization or it may not be started at all.")
-		rlog.Println("Tip: try running with sudo/with elevated permissions")
-	}
+	rerr.Notify("Failed connecting to rays, it may not have finished initalization or it may not be started at all.\nTip: try running with sudo/with elevated permissions", err)
+	
 	defer conn.Close()
 
 	var jsonCommand cliCommand
@@ -241,15 +231,11 @@ func cliSendCommand(command string, args []string) []byte {
 	jsonCommand.Args = args
 
 	jsonData, err := json.Marshal(jsonCommand)
-	if err != nil {
-		log.Fatal(err)
-	}
+	rerr.Fatal(err.Error(), err)
 	jsonData = append(jsonData, byte('\n'))
 
 	_, err = conn.Write(jsonData)
-	if err != nil {
-		log.Fatal("Failed to send command: " + err.Error())
-	}
+	rerr.Fatal("Failed to send command: " + err.Error(), err)
 
 	if (command == "STOP") {return []byte("\n")}
 	buffer := make([]byte, 4096)
@@ -279,9 +265,7 @@ func daemonListen() {
 	}
 
 	listener, err := net.Listen("unix", socketPath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	rerr.Fatal(err.Error(), err)
 
 	for {
 		conn, err := listener.Accept()
