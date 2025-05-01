@@ -39,7 +39,7 @@ func intParse(val string) int64 {
 
 func startHttpServer(srv *http.Server) {
 	err := srv.ListenAndServe()
-	rerr.Notify(err.Error(), err)
+	rerr.Notify("Failed starting http server: ", err, true)
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
@@ -53,7 +53,7 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 	}
 	err := srv.ListenAndServeTLS(certFile, keyFile)
 
-	rerr.Notify(err.Error(), err)
+	rerr.Notify("Failed listenting with https: ", err, true)
 }
 
 func startProxy() {
@@ -190,7 +190,10 @@ func startProxy() {
 				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
 
 				body, err := io.ReadAll(r.Body)
-				rerr.Fatal(err.Error(), err)
+				if err != nil {
+					rlog.Notify("Failed http request reading body, not injecting rayutil", "warn")
+					return nil
+				}
 				
 				bodyStr := string(body)
 				rayutl := ""

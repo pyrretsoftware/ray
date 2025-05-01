@@ -173,7 +173,7 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 		process.remove = func() {
 			makeGhost(&process)
 			err := cmd.Process.Kill()
-			rerr.Notify("Process kill error " + err.Error(), err)
+			rerr.Notify("Process kill error: ", err, true)
 		}
 
 		for field, val := range project.EnvVars {

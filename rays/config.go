@@ -26,7 +26,7 @@ func applyChangesRaw(config []byte) error {
 
 func readConfigRaw() []byte {
 	_config, err := os.ReadFile(path.Join(dotslash, "rayconfig.json"))
-	rerr.Fatal("Failed reading rayconfig: " + err.Error(), err)
+	rerr.Fatal("Failed reading rayconfig: ", err, true)
 	return _config
 }
 

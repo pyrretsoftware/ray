@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -60,9 +59,7 @@ func removeComponent(dir string) {
 			rmfunc = os.RemoveAll
 		}
 		err := rmfunc(dir)
-		if (err != nil) {
-			rlog.Fatal("Couldn't remove component: " + err.Error())
-		}
+		rerr.Fatal("Couldn't remove component: ", err, true)
 	} else {
 		rlog.Notify("Component " + dir +" not found, ray might not have been properly installed.", "warn")
 	}
@@ -80,7 +77,7 @@ func handleCommand(args []string) {
 		installLocation := "/usr/bin"
 		if runtime.GOOS == "windows" {
 			dir, err := os.UserHomeDir()
-			rerr.Fatal(err.Error(), err)
+			rerr.Fatal("", err, true)
 			installLocation = dir
 		}
 	
@@ -94,11 +91,11 @@ func handleCommand(args []string) {
 	case "rray-edit-config":
 		if len(os.Args) > 2 {
 			ba, err := base64.StdEncoding.DecodeString(os.Args[2])
-			rerr.Fatal("Invalid b64 config string: " + err.Error(), err)
+			rerr.Fatal("Invalid b64 config string: ", err, true)
 
 			applyChangesRaw(ba)
 		} else {
-			log.Fatal("No b64 config provided.")
+			rlog.Fatal("No b64 config provided.")
 		}
 	case "version":
 		fmt.Println(Version)
@@ -112,7 +109,7 @@ func handleCommand(args []string) {
 		var response []process
 		err := json.Unmarshal(jsonRes, &response)
 		if (err != nil) {
-			log.Fatal(err)
+			rlog.Fatal(err)
 		}
 
 		for _, process := range response {
@@ -155,7 +152,7 @@ func handleCommand(args []string) {
 		var response auth
 		err := json.Unmarshal(jsonRes, &response)
 		if (err != nil) {
-			log.Fatal(err)
+			rlog.Fatal(err)
 		}
 
 		rlog.Notify("Success!", "done")
@@ -182,7 +179,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 	switch command.Command {
 	case "LISTPROCESS":
 		json, err := json.Marshal(processes)
-		rerr.Notify(err.Error(), err)
+		rerr.Notify("Failed marshaling json: ", err, true)
 
 		return append(json, byte('\n'))
 	case "RELOAD":
@@ -210,7 +207,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 	case "GETDEVAUTH":
 		generateAuth()
 		json, err := json.Marshal(devAuth)
-		rerr.Notify(err.Error(), err)
+		rerr.Notify("Failed marshaling json: ", err, true)
 
 		return append(json, byte('\n'))
 	default:
@@ -231,11 +228,11 @@ func cliSendCommand(command string, args []string) []byte {
 	jsonCommand.Args = args
 
 	jsonData, err := json.Marshal(jsonCommand)
-	rerr.Fatal(err.Error(), err)
+	rerr.Fatal("Failed marshaling json: ", err, true)
 	jsonData = append(jsonData, byte('\n'))
 
 	_, err = conn.Write(jsonData)
-	rerr.Fatal("Failed to send command: " + err.Error(), err)
+	rerr.Fatal("Failed to send command: ", err, true)
 
 	if (command == "STOP") {return []byte("\n")}
 	buffer := make([]byte, 4096)
@@ -243,7 +240,7 @@ func cliSendCommand(command string, args []string) []byte {
 	for {
 		n, _err := conn.Read(buffer)
 		if _err != nil {
-			log.Println("Error reading from connection:", _err)
+			rlog.Println("Error reading from connection:" + _err.Error())
 			break
 		}
 
@@ -261,16 +258,16 @@ func daemonListen() {
 	socketPath := dotslash + "/clisocket.sock"
 
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		log.Println("Warning: could not remove existing socket file:", err)
+		rlog.Notify("Could not remove existing socket file:" + err.Error(), "warn")
 	}
 
 	listener, err := net.Listen("unix", socketPath)
-	rerr.Fatal(err.Error(), err)
+	rerr.Fatal("Failed listenting to cli socket", err, true)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Println("Invalid cli connection: " + err.Error())
+			rlog.Notify("Invalid cli connection: " + err.Error(), "err")
 			continue
 		}
 
@@ -280,7 +277,7 @@ func daemonListen() {
 		for {
 			n, _err := conn.Read(buffer)
 			if _err != nil {
-				log.Println("Error reading from connection:", _err)
+				rlog.Notify("Error reading from connection:" + _err.Error(), "err")
 				break
 			}
 
@@ -294,8 +291,8 @@ func daemonListen() {
 		var command cliCommand
 		__err := json.Unmarshal(_command, &command)
 		if __err != nil {
-			log.Println("Issue decoding CLI command: " + __err.Error())
-			log.Println(string(_command))
+			rlog.Notify("Issue decoding CLI command: " + __err.Error(), "err")
+			rlog.Notify(string(_command), "err")
 			continue
 		}
 
