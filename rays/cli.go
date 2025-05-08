@@ -35,10 +35,12 @@ func formatProcessList(process process) string {
 	}
 
 	content += "\n- Internal Port: "+ strconv.Itoa(process.Port)
+	content += "\n- RLS Type: "+ process.RLSInfo.Type
 	content += "\n- Log file: "+ process.LogFile
 	content += "\n- Enviroument: "+ process.Env
 	content += "\n- Hash: "+ process.Hash
 	content += "\n- Deployment: "+ process.Branch
+	content += "\n- ID (Used for RLS): "+ process.Id
 
 	return content
 }
@@ -133,9 +135,9 @@ func handleCommand(args []string) {
 		} else {
 			rlog.Fatal("Failed applying changes to config.")
 		}
-	case "stop":
+	case "exit":
 		rlog.Println("Exiting...")
-		data := cliSendCommand("STOP", nil)
+		data := cliSendCommand("EXIT", nil)
 
 		if (string(data) == "\n") {
 			rlog.Notify("Exited!", "done")
@@ -185,8 +187,9 @@ func daemonHandleCommand(command cliCommand) []byte {
 	case "RELOAD":
 		config := readConfig()
 		rconf = &config
+		
 		for _, project := range rconf.Projects {
-			startProject(&project, rdata.RayEnv)
+			startProject(&project)
 		}
 		return []byte("success\n")
 	case "FORCE_RE":
@@ -200,7 +203,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 			data = err.Error()
 		}
 		return []byte(data + "\n")
-	case "STOP":
+	case "EXIT":
 		rlog.Println("Exiting...")
 		os.Exit(0)
 		return []byte("\n")
@@ -234,7 +237,7 @@ func cliSendCommand(command string, args []string) []byte {
 	_, err = conn.Write(jsonData)
 	rerr.Fatal("Failed to send command: ", err, true)
 
-	if (command == "STOP") {return []byte("\n")}
+	if (command == "EXIT") {return []byte("\n")}
 	buffer := make([]byte, 4096)
 	_command := make([]byte, 0)
 	for {

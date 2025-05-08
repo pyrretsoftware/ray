@@ -37,5 +37,14 @@ func readConfig() rayconfig {
 		rlog.Fatal(err)
 	}
 
+	var modProjects []project
+	for _, project := range config.Projects {
+		if len(project.DeployOn) == 0 {
+			project.DeployOn = []string{"local"}
+		}
+		modProjects = append(modProjects, project)
+	}
+	config.Projects = modProjects
+
 	return config
 }

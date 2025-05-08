@@ -8,3 +8,5 @@ rays/clisocket.sock
 rays/ray-env
 rray/hosts.json
 rray/rray
+rayinstall/rays
+rayinstall/version

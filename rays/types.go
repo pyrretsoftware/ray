@@ -1,5 +1,9 @@
 package main
 
+import (
+	"net"
+)
+
 type deployment struct {
 	Branch string
 	Type string
@@ -15,6 +19,7 @@ type project struct {
 	PluginImplementation string
 	Options map[string]string
 	ProjectConfig projectConfig
+	DeployOn []string
 }
 
 type auth struct {
@@ -35,12 +40,40 @@ type gitAuth struct {
 	Password string
 }
 
+type RLSipPair struct {
+	Public net.IP
+	Private net.IP
+}
+
+type RLSPRequest struct {
+	Action string
+	Project project //only used when action is "startProject"
+	RemoveProcessTarget string //onlu used when action is "removeProcess"
+	Processes []process
+}
+
+type rlsConnection struct {
+	IP net.IP
+	Role string //enum, either client or server
+	Connection *net.Conn
+	Name string
+	RLSPGetResponse *func(id string) []byte
+}
+type helperServer struct {
+	Host string
+	Name string
+}
+type rlsConfig struct {
+	Helpers []helperServer
+}
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
 	TLS tlsConfig
 	EnableRayUtil bool
 	GitAuth gitAuth
+	RLSConfig rlsConfig 
 }
 
 type rayserveRedirect struct {
@@ -80,6 +113,10 @@ type rayStatus struct {
 	Processes []statusItem
 }
 
+type rlsInfo struct {
+	Type string //enum, either local, outsourced or adm (for administered)
+	IP string
+}
 type process struct {
 	Project *project
 	Env string
@@ -92,6 +129,8 @@ type process struct {
 	Branch string
 	Hash string
 	LogFile string
+	Id string
+	RLSInfo rlsInfo
 }
 type logFile struct {
 	Success bool

@@ -85,7 +85,7 @@ Type=idle
 Restart=always
 ExecStart=${BinaryPath} daemon
 ExecReload=${BinaryPath} reload
-ExecStop=${BinaryPath} stop
+ExecStop=${BinaryPath} exit
 
 [Install]
 WantedBy=multi-user.target`

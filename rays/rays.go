@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-var Version = "unknown"
+var Version = "unknown version"
 
 func main() {
 	if (!checkPerms()) {
@@ -16,9 +16,12 @@ func main() {
 	}
 
 	if (os.Args[1] == "daemon") {
+		_cnf := readConfig()
+		rconf = &_cnf
+		
 		rlog.Println("Ray server daemon launched.")
 		rlog.Println("Setting up ray enviroument...")
-		
+		initRLS()
 		go daemonListen()
 		SetupEnv()
 		startProxy()

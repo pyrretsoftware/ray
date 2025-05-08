@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -25,7 +26,9 @@ const (
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "Host not found",
 	`AuthError` : "Incorrect credentials",
+	`RLSError` : "rls error (check rls connection status)",
 	` connection refused` : "Server not responding",
+	`ProcessError` : `process errored, most likely exited unexpectedly. check process logs.`,
 }
 
 func intParse(val string) int64 {
@@ -59,21 +62,56 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 func startProxy() {
 	srv := &http.Server{Handler: &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
-			r.SetXForwarded()
+			if r.In.Header.Get("x-rls-process") != "" {
+				fromHelperServer := false
+				rlsIp := net.ParseIP(strings.Split(r.In.RemoteAddr, ":")[0])
 
-			var requestProcess process
+				for _, conn := range rlsConnections {
+					if conn.IP.Equal(rlsIp) {
+						fromHelperServer = true
+						break
+					}
+				}
+
+				if (!fromHelperServer) {
+					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RLSError")
+					r.Out = r.Out.WithContext(behaviourctx)
+					return
+				}
+
+				for _, process := range processes {
+					if process.Id == r.In.Header.Get("x-rls-process") && process.RLSInfo.Type == "adm" && process.RLSInfo.IP == rlsIp.String() {
+						finalUrl, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(process.Port))
+						if err != nil {
+							return
+						}
+
+						r.SetURL(finalUrl)
+						return
+					}
+				}
+
+				behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RLSError")
+				r.Out = r.Out.WithContext(behaviourctx)
+				return
+			}
+
+			r.SetXForwarded()
+			r.Out.Header.Del("x-rls-process")
+
+			var requestProject project
 			foundProcess := false
 			for _, process := range processes {
 				if process.Project.Domain == r.In.Host && !process.Project.ProjectConfig.NotWebsite {
 					foundProcess = true
-					requestProcess = *process //note here we are braking as soon as we find an process instance of that project, meaning we'll need to loop over the processes again later for finding the one with out specific channel
+					requestProject = *process.Project //note here we are braking as soon as we find an process instance of that project, meaning we'll need to loop over the processes again later for finding the one with out specific channel
 					break
 				}
 			}
 			if (!foundProcess) {return}
 
 			//invoke plugin
-			pluginData, ok := invokePlugin(*requestProcess.Project)
+			pluginData, ok := invokePlugin(requestProject)
 			if ok {
 				r.Out.Header.Add("x-ray-plugin-data", pluginData)
 			}
@@ -86,7 +124,7 @@ func startProxy() {
 			requiresAuth := false
 			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) { //enroll new user
 				var rand = rand.Float64() * 100
-					dplymnt := requestProcess.Project.Deployments
+					dplymnt := requestProject.Deployments
 	
 					for index, deployment := range dplymnt {
 						if deployment.Type != "test" {
@@ -111,7 +149,7 @@ func startProxy() {
 					ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
 					r.Out = r.Out.WithContext(ctx)
 			} else {
-				for _, dpl := range requestProcess.Project.Deployments {
+				for _, dpl := range requestProject.Deployments {
 					if dpl.Branch == _ch.Value {
 						if (dpl.Type == "dev") {
 							requiresAuth = true
@@ -149,16 +187,26 @@ func startProxy() {
 				}
 			}
 			existsAsDropped := false
+			existsAsErrored := false
 			hostFound := false
 			tryRoute := func() {
 				for _, process := range processes { //see above for more info
-					if process.Project.Domain == r.In.Host && process.Branch == chnl {
+					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
 						if (process.State == "drop") {
 							existsAsDropped = true
 							continue
+						} else if (!process.Active) {
+							existsAsErrored = true
+							continue
 						}
 
-						url, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(process.Port))
+						destUrl := "http://127.0.0.1:" + strconv.Itoa(process.Port)
+						if process.RLSInfo.Type == "outsourced" {
+							destUrl = "http://" + process.RLSInfo.IP + ":80"
+							r.Out.Header.Add("x-rls-process", process.Id)
+						}	
+
+						url, err := url.Parse(destUrl)
 						if err != nil {
 							return
 						}
@@ -167,6 +215,12 @@ func startProxy() {
 						break
 					}
 				}
+			}
+
+			if !hostFound && existsAsErrored {
+				behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "ProcessError")
+				r.Out = r.Out.WithContext(behaviourctx)
+				return
 			}
 
 			tryRoute()
@@ -219,6 +273,7 @@ func startProxy() {
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			errorCode := err.Error()
+			errorContent := errorPage
 			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
 				if (beh == "RequestAuth") {
 					w.WriteHeader(401)
@@ -226,21 +281,25 @@ func startProxy() {
 					return
 				} else if (beh == "AuthError") {
 					errorCode = "AuthError"
+				} else if (beh == "RLSError") {
+					errorCode = "RLSError"
+					errorContent = processErrorPage
+				} else if (beh == "ProcessError") {
+					errorCode = "ProcessError"
+					errorContent = processErrorPage
 				}
 			}
 
 			w.Header().Add("Content-Type", "text/html")
 			w.Header().Add("Set-Cookie", "ray-channel=prod")
 			
-			content := errorPage
-			
-			w.WriteHeader(400)
+
+			w.WriteHeader(500)
 			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":")) - 1]]
 			if (errorMsg == "") {
-				rlog.Notify("Sending unknown error: " + errorCode, "err")
 				errorMsg = "Unknown error"
 			}
-			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(content, "${ErrorCode}", errorMsg), "${RayVer}", Version)))
+			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(errorContent, "${ErrorCode}", errorMsg), "${RayVer}", Version)))
 		},
 	}}
 	go startHttpServer(srv)

@@ -89,7 +89,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 		}
 		if (doUpdate) {
 			rlog.Println("Performing update on " + project.Name)
-			startProject(&project, rdata.RayEnv)
+			startProject(&project)
 		}
 		newProjects = append(newProjects, project)
 	}
@@ -105,7 +105,7 @@ func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pi
 	})
 }
 
-func launchProject(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string) {
+func deployLocalProcess(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
 	_config, err := os.ReadFile(configPath)
 	if (err != nil) {
@@ -117,6 +117,14 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 
 	process.Branch = branch
 	process.Hash = branchHash
+	process.Id = procId
+	process.RLSInfo.IP = RLSHost
+	if RLSHost == "127.0.0.1" {
+		process.RLSInfo.Type = "local"
+	} else {
+		process.RLSInfo.Type = "adm"
+	}
+
 	if err := json.Unmarshal(_config, &config); err != nil {
 		rlog.Fatal(err)
 	}
@@ -268,12 +276,12 @@ func launchProject(configPath string, dir string, project *project, swapfunction
 	processes = append(processes, &process)
 }
 
-func startProject(project *project, env string) {
+func setupLocalProject(project *project, host string) []process {
 	validateDeployments(project.Deployments)
 
 	var oldprocesses []*process
 	for _, prc := range processes {
-		if (prc.Project.Name == project.Name && !prc.Ghost) {
+		if (prc.Project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
 			oldprocesses = append(oldprocesses, prc)
 		}
 	}
@@ -291,7 +299,8 @@ func startProject(project *project, env string) {
 		}
 		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + _dpl + ")")
 
-		dir := env + "/" + project.Name + "-" + strconv.Itoa(rand.IntN(10000000))
+		procId := strings.ReplaceAll(project.Name, " ", "-") + "-" + strconv.Itoa(rand.IntN(10000000))
+		dir := rdata.RayEnv + "/" + procId
 		os.Mkdir(dir, 0600)
 
 		_cmd := []string{"clone", project.Src}
@@ -335,16 +344,32 @@ func startProject(project *project, env string) {
 		if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
-		launchProject(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir)
+		deployLocalProcess(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
+	}
+
+	var newProcesses []process
+	for _, process := range processes {
+		if process.RLSInfo.IP == host {
+			newProcesses = append(newProcesses, *process)
+		}
+	}
+	return newProcesses
+}
+
+func startProject(project *project) {
+	if slices.Contains(project.DeployOn, "local") {
+		setupLocalProject(project, "127.0.0.1")
+	}
+
+	for _, deploymentTarget := range project.DeployOn {
+		if deploymentTarget == "local" {continue}
+		go setupRlspProject(project, deploymentTarget)
 	}
 }
 
 var rconf *rayconfig
 var rdata raydata
 func SetupEnv() {
-	_cnf := readConfig()
-	rconf = &_cnf
-	
 	os.Mkdir(dotslash, 0600)
 	os.Mkdir(dotslash + "/projects", 0600)
 	os.Mkdir(dotslash + "/ray-certs", 0600)
@@ -363,12 +388,14 @@ func SetupEnv() {
 		os.Exit(0)
 	}()	
 	var newProjects []project
+
 	for _, project := range rconf.Projects {
-		startProject(&project, rdata.RayEnv)
+		startProject(&project)
 		newProjects = append(newProjects, project)
 	}
 
 	rconf.Projects = newProjects
+	RLSinitalConnectionOver = true
 	validateConfig(*rconf)
 	go startUpdateCheck()
 }

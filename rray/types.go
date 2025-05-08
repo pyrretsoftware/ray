@@ -33,3 +33,8 @@ type logSection struct {
 	Log string
 	Success bool
 }
+
+type rlsInfo struct {
+	Type string //enum, either local, outsourced or adm (for administered)
+	IP string
+}
