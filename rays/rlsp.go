@@ -168,6 +168,42 @@ func broadcastProcessReports() {
 	}
 }
 
+func getHelperServerConfigFromProcess(proc process) helperServer {
+	var foundRlsConn rlsConnection
+	for _, conn := range rlsConnections {
+		if conn.IP.Equal(net.ParseIP(proc.RLSInfo.IP)) {
+			foundRlsConn = conn
+			break
+		}
+	}
+
+	var foundHelperServer helperServer
+	for _, helperServer := range rconf.RLSConfig.Helpers {
+		if helperServer.Name == foundRlsConn.Name {
+			foundHelperServer = helperServer
+			break
+		}
+	}
+
+	return foundHelperServer
+}
+
+func getRlsWeightArray(processList []process) []process {
+	var wa []process
+	for _, process := range processList {
+		weight := getHelperServerConfigFromProcess(process).Weight
+		if weight == 0 {
+			weight = 1
+		}
+
+		for range weight {
+			wa = append(wa, process)
+		}
+	}
+
+	return wa
+}
+
 func reloadRLSPProjects(rlsConn rlsConnection) {
 	for _, project := range rconf.Projects {
 		if !slices.Contains(project.DeployOn, rlsConn.Name) {continue}
