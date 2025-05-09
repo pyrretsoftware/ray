@@ -86,7 +86,7 @@ var loginPage = `<!DOCTYPE html>
         <div class="inst">
             <span>1. On this server, open up a command line and run the following ray command:</span>
             <p class="command"><span style="padding-left: 0.55rem;">$ </span>
-                <input style="padding-left: 0;" type="text" name="" value="rays dev-auth" readonly id="">
+                <input style="padding-left: 0;" type="text" name="" value="sudo rays dev-auth" readonly id="">
             </p>
             <span>2. Take your newly generated authentication key and paste it in the field below:</span>
 
@@ -94,7 +94,7 @@ var loginPage = `<!DOCTYPE html>
                 <p style="padding: 0; margin-bottom: 0;" class="command">
                     <input style="width: 100%;" id="authkey" type="text" name="" required placeholder="authentication key goes here!" id="">
                 </p>
-                <button style="height: 2.03755rem; width: 2.03755rem; margin-bottom: 0; border: 0; " class="command" href="/">
+                <button style="width: 36px; margin-bottom: 0; border: 0; " class="command" href="/">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
             </button>
             </form>
