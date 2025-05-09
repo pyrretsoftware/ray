@@ -9,6 +9,10 @@ var deploymentTypes = []string{
 }
 
 func validateConfig(config rayconfig) {
+	if !rconf.RLSConfig.Enabled && len(rconf.RLSConfig.Helpers) > 0 {
+		rlog.Fatal("Helper servers are defined but RLS have not been enabled.")
+	}
+
 	var nameList []string
 	for _, project := range config.Projects {
 		if slices.Contains(nameList, project.Name) {

@@ -200,6 +200,7 @@ func connectRLSServer(rlsConn *rlsConnection) bool {
 }
 
 func initRLS() {
+	if !rconf.RLSConfig.Enabled {return}
 	localIps := getIps()
 	for _, helperServer := range rconf.RLSConfig.Helpers {
 		rlog.Println("Connecting to helper server " + helperServer.Name)

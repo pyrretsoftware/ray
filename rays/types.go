@@ -66,6 +66,7 @@ type helperServer struct {
 }
 type rlsConfig struct {
 	Helpers []helperServer
+	Enabled bool
 }
 
 type rayconfig struct {
