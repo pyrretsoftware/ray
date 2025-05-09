@@ -16,6 +16,7 @@ type project struct {
 	EnvVars map[string]string
 	Domain string
 	Deployments []deployment
+	ProdTypeIsDev bool
 	PluginImplementation string
 	Options map[string]string
 	ProjectConfig projectConfig

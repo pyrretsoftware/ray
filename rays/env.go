@@ -72,7 +72,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 
 		dplymnt := project.Deployments
 		dplymnt = append(dplymnt, deployment{
-			Branch: "prod",
+			Type: "prod",
 		})
 
 		for _, deployment := range dplymnt {

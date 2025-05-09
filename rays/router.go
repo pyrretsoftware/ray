@@ -145,6 +145,7 @@ func startProxy() {
 	
 					if chnl == "" {
 						chnl = "prod"
+						requiresAuth = requestProject.ProdTypeIsDev
 					}
 					ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
 					r.Out = r.Out.WithContext(ctx)
@@ -166,6 +167,7 @@ func startProxy() {
 						r.Out = r.Out.WithContext(warnctx)
 					}
 					chnl = "prod"
+					requiresAuth = requestProject.ProdTypeIsDev
 				}
 			}
 
