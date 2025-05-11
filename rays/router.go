@@ -168,6 +168,8 @@ func startProxy() {
 						warnctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Specified channel not found, now enrolled on prod.")
 						warnctx = context.WithValue(warnctx, rayUtilIcon, "warn")
 						r.Out = r.Out.WithContext(warnctx)
+						r.Out.Header.Del("If-None-Match")
+						r.Out.Header.Del("If-Modified-Since")
 					}
 					chnl = "prod"
 					requiresAuth = requestProject.ProdTypeIsDev
@@ -189,6 +191,8 @@ func startProxy() {
 					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;"+chnl+"&#39;")
 					infoctx = context.WithValue(infoctx, rayUtilIcon, "login")
 					r.Out = r.Out.WithContext(infoctx)
+					r.Out.Header.Del("If-None-Match")
+					r.Out.Header.Del("If-Modified-Since")
 				}
 			}
 			existsAsDropped := false
