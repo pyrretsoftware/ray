@@ -5,10 +5,8 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"math/rand/v2"
 	"net"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -220,7 +218,7 @@ func broadcastProcessReportsLoop() { //run as new goroutine/async
 
 func sendRlspRequest(body string, goal rlsConnection) []byte {
 	conn := *goal.Connection
-	reqId := strconv.Itoa(rand.IntN(1000000000))
+	reqId := getUuid()
 
 	conn.Write([]byte("request:" + reqId + "|" + body + "\n"))
 	return (*goal.RLSPGetResponse)(reqId)

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/hex"
 	"math/rand/v2"
 	"net"
 	"os"
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 func checkPerms() bool {
@@ -14,6 +16,19 @@ func checkPerms() bool {
 		return os.Geteuid() == 0
 	}
 	return true
+}
+
+func getUuid() string { //technically not a uuid ig
+	uuid := ""
+	for range 5 {
+		section := []byte{}
+		for range 4 {
+			section = append(section, byte(rand.Uint32N(255)))
+		}
+		uuid = uuid + hex.EncodeToString(section) + "-"
+	}
+
+	return uuid[:len(strings.Split(uuid, ""))-1]
 }
 
 func makeGhost(process *process) {

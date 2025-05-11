@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"math/rand/v2"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -131,7 +130,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	validateProjectConfig(config, *project)
 	project.ProjectConfig = config
 
-	logPath := path.Join(logDir, "log-" + strconv.Itoa(rand.IntN(10000000)) + ".json")
+	logPath := path.Join(logDir, "log-" + getUuid() + ".json")
 	var logFile logFile 
 
 	process.Project = project
@@ -299,7 +298,7 @@ func setupLocalProject(project *project, host string) []process {
 		}
 		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + _dpl + ")")
 
-		procId := strings.ReplaceAll(project.Name, " ", "-") + "-" + strconv.Itoa(rand.IntN(10000000))
+		procId := strings.ReplaceAll(project.Name, " ", "-") + "-" + getUuid()
 		dir := rdata.RayEnv + "/" + procId
 		os.Mkdir(dir, 0600)
 
@@ -374,7 +373,7 @@ func SetupEnv() {
 	os.Mkdir(dotslash + "/projects", 0600)
 	os.Mkdir(dotslash + "/ray-certs", 0600)
 
-	rdata.RayEnv = dotslash + "/projects/ray-env-" + strconv.Itoa(rand.IntN(10000000))
+	rdata.RayEnv = dotslash + "/projects/ray-env-" + getUuid()
 	os.Mkdir(rdata.RayEnv, 0600)
 	go func() {
 		chnl := make(chan os.Signal)
