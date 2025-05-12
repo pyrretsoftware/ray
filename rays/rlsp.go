@@ -33,6 +33,7 @@ func attachRlspListener(rlsConn *rlsConnection) {
 			if err != nil {
 				rlog.Notify("Error reading from RLS Channel", "err")
 				rlsConn.Connection = nil
+				go triggerEvent("rlsConnectionLost", *rlsConn)
 				rlog.Println("Attempting to reconnect...")
 
 				for i, c := range rlsConnections {
@@ -92,6 +93,12 @@ func attachRlspListener(rlsConn *rlsConnection) {
 func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) {
 	var newProcesses []*process
 	var updatedProcessesIds []string
+	var oldOutsourcedProcesses []string
+	for _, prc := range processes {
+		if prc.RLSInfo.Type == "outsourced" && prc.RLSInfo.IP == rlsConn.IP.String() {
+			oldOutsourcedProcesses = append(oldOutsourcedProcesses, prc.Id)
+		}
+	}
 
 	for _, process := range updatedProcesses {
 		updatedProcessesIds = append(updatedProcessesIds, process.Id)
@@ -110,6 +117,10 @@ func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) 
 		process.RLSInfo.Type = "outsourced"
 		process.RLSInfo.IP = rlsConn.IP.String()
 		newProcesses = append(newProcesses, &process)
+
+		if !slices.Contains(oldOutsourcedProcesses, process.Id) {
+			go triggerEvent("newProcess", process)
+		}
 	}
 
 	for _, process := range processes {
@@ -141,6 +152,7 @@ func broadcastProcessReports() {
 				if process.RLSInfo.IP == rlsConn.IP.String() {
 					process.State = "Lost RLS Connection"
 					process.Active = false
+					go triggerEvent("processError", *process)
 				}
 				newProcesses = append(newProcesses, process)
 			}
@@ -240,6 +252,7 @@ func setupRlspProject(project *project, target string) {
 
 	if rlsConn.Connection == nil {
 		rlog.Notify("Couldn't deploy outsourced project, RLSP connection is not active.", "err")
+		triggerEvent("projectNoRlsError", *project)
 		return
 	}
 

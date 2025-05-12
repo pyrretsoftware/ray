@@ -22,9 +22,11 @@ func trackProcess(cmd *exec.Cmd, process *process, buffer *strings.Builder) {
 		rlog.Notify("Process errored: ", "err")
 		rlog.Notify(buffer.String(), "err")
 		process.State = buffer.String()
+		go triggerEvent("processError", *process)
 	} else {
 		rlog.Println("Process exited.")
-		process.State = "Exited"
+		process.State = "Exited without error."
+		go triggerEvent("processError", *process)
 	}
 	process.Active = false
 }
@@ -234,6 +236,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			}
 			process.Active = false
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, false)
+			go triggerEvent("processError", process)
 		} else {
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
@@ -252,6 +255,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 					rlog.Println("Process has not yet started listening for connections.")
 					go waitForPortOpen(&process)
 				}
+
 				break
 			}
 		}
@@ -261,9 +265,11 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	if (process.Active && process.State == "OK") {
 		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
 		logFile.Success = true
+		go triggerEvent("newProcess", process)
 	} else {
 		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
 		logFile.Success = false
+		go triggerEvent("processError", process)
 	}
 	logB, err := json.Marshal(logFile)
 	if err != nil {

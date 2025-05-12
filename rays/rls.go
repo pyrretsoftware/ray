@@ -169,6 +169,7 @@ func tryRLSConnect(rlsconn rlsConnection, indx int) {
 
 	if !ok {
 		rlog.Notify("Failed connecting to RLS Server ("+rlsconn.Name+") three times. Trying again in ca. 30 seconds", "err")
+		triggerEvent("rlsConnectionFailed", rlsconn)
 	} else {
 		rlog.Notify("Connected to RLS helper server "+ rlsconn.Name + " (with client role)", "done")
 		if RLSinitalConnectionOver {
@@ -196,6 +197,7 @@ func connectRLSServer(rlsConn *rlsConnection) bool {
 
 	rlsConn.Connection = &conn
 	attachRlspListener(rlsConn)
+	go triggerEvent("rlsConnectionMade", *rlsConn)
 	return true
 }
 

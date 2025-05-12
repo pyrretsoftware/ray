@@ -14,6 +14,7 @@ func serveStaticServer(srv *http.Server, process *process) {
 		if (process.State != "drop") {
 			process.Active = false
 			process.State = "Exited, " + err.Error()
+			go triggerEvent("processError", *process)
 			rlog.Notify(err, "err")
 		}
 	}

@@ -70,6 +70,14 @@ type rlsConfig struct {
 	Enabled bool
 }
 
+type webhook struct {
+	Type string //enum, either "discord", "slack" or "generic"
+	Url string
+}
+type monitoringConfig struct {
+	Webhooks []webhook
+	TriggerOn []string //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
+}
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
@@ -77,6 +85,7 @@ type rayconfig struct {
 	EnableRayUtil bool
 	GitAuth gitAuth
 	RLSConfig rlsConfig 
+	Monitoring monitoringConfig
 }
 
 type rayserveRedirect struct {

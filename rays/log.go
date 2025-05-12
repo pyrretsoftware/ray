@@ -58,6 +58,7 @@ var rlog = loggerType{
 			}
 	
 			os.WriteFile(path.Join(dotslash, "crash.txt"), ba, 0600)
+			triggerEvent("raysExit", nil)
 		}
 		os.Exit(1)
 	},

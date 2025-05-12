@@ -20,6 +20,7 @@ func main() {
 		rconf = &_cnf
 		
 		rlog.Println("Ray server daemon launched.")
+		go triggerEvent("raysStart", nil)
 		rlog.Println("Setting up ray enviroument...")
 		initRLS()
 		go daemonListen()
