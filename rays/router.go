@@ -25,11 +25,8 @@ const (
 )
 
 var errorCodes = map[string]string{
-	`unsupported protocol scheme ""`: "Host not found",
-	`AuthError`:                      "Incorrect credentials",
-	`RLSError`:                       "rls error (check rls connection status)",
-	` connection refused`:            "Server not responding",
-	`ProcessError`:                   `process errored, most likely exited unexpectedly. check process logs.`,
+	`unsupported protocol scheme ""`: "HostNotFound",
+	` connection refused`:            "ProcessOffline",
 }
 
 func intParse(val string) int64 {
@@ -75,7 +72,7 @@ func startProxy() {
 				}
 
 				if !fromHelperServer {
-					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RLSError")
+					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "SecurityBlock")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
 				}
@@ -301,20 +298,20 @@ func startProxy() {
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			errorCode := err.Error()
-			errorContent := errorPage
+			errorContent := ""
 			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
 				if beh == "RequestAuth" {
 					w.WriteHeader(401)
 					w.Write([]byte(loginPage))
 					return
 				} else if beh == "AuthError" {
-					errorCode = "AuthError"
+					errorContent = getV2ErrorPage("invalid auth", "working", "working", "requestIssue", "invalid dev channel authentication. clear your cookies and try again.")
 				} else if beh == "RLSError" {
-					errorCode = "RLSError"
-					errorContent = processErrorPage
+					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "rls related process error, the rls server is likely offline.")
+				} else if beh == "SecurityBlock" {
+					errorContent = getV2ErrorPage("request blocked", "working", "working", "requestIssue", "your request was blocked for security reasons.")
 				} else if beh == "ProcessError" {
-					errorCode = "ProcessError"
-					errorContent = processErrorPage
+					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "non-rls related process error, likely an application issue.")
 				}
 			}
 
@@ -322,11 +319,17 @@ func startProxy() {
 			w.Header().Add("Set-Cookie", "ray-channel=prod")
 
 			w.WriteHeader(500)
-			errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":"))-1]]
-			if errorMsg == "" {
-				errorMsg = "Unknown error"
+			if errorContent == "" {
+				errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":"))-1]]
+				if errorMsg == "HostNotFound" {
+					errorContent = getV2ErrorPage("working", "working", "nonexistant", "cantResolve", "host not found")
+				} else if errorMsg == "ProcessOffline" {
+					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "process can be resolved but is refusing connection.")
+				} else if errorMsg == "" {
+					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
+				}
 			}
-			w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(errorContent, "${ErrorCode}", errorMsg), "${RayVer}", Version)))
+			w.Write([]byte(errorContent))
 		},
 	}}
 	go startHttpServer(srv)

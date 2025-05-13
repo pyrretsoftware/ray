@@ -78,6 +78,7 @@ type monitoringConfig struct {
 	Webhooks []webhook
 	TriggerOn []string //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
 }
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
