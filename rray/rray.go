@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 
@@ -20,6 +22,12 @@ func validateRemote(remote string) {
 	if (!hostExists || !authExists) {
 		log.Fatal("Invalid remote name")
 	}
+}
+
+func validateDomain(input string) error {
+	if _, found := strings.CutPrefix(input, "http://"); found {return errors.New("Provide only the name and not a protocol, for example, 'example.com' instead of 'https://example.com'")}
+	if _, found := strings.CutPrefix(input, "https://"); found {return errors.New("Provide only the name and not a protocol, for example, 'example.com' instead of 'https://example.com'")}
+	return nil
 }
 
 func main() {	
@@ -90,6 +98,86 @@ func main() {
 			},
 		  },
 		  {
+			Name: "deploy",
+			Description: "deploy gets the remote associated with the git repository in the current directory, and deploys that to a remote ray server.",
+			Usage: "provide the -r flag to specify the remote server",
+			Flags: []cli.Flag{&remoteFlag},
+			Action: func(ctx *cli.Context) error {
+				validateRemote(ctx.String("remote"))
+
+				cmd := exec.Command("git", "remote", "-v")
+				ba, err := cmd.Output()
+				if err != nil {
+					fmt.Println(ba)
+					return err
+				}
+
+				var remoteOptions []huh.Option[string]
+				for line := range strings.SplitSeq(string(ba), "\n") {
+					if !strings.Contains(line, "fetch") {continue}
+					
+					remoteOptions = append(remoteOptions, huh.NewOption(strings.Split(line, "\t")[0], strings.Split(strings.Split(line, "\t")[1], " ")[0]))
+				}
+				if len(remoteOptions) == 0 {
+					log.Fatal("No remotes found!")
+					return nil
+				}
+				
+				var selectedRemote string
+				serr := huh.NewSelect[string]().Title("Pick the remote you would like to deploy from:").Options(remoteOptions...).Value(&selectedRemote).Run()
+				if serr != nil {
+					log.Fatal("Error showing form.")
+					return nil
+				}
+
+				var selectedName string
+				var selectedDomain string
+				ferr := huh.NewForm(huh.NewGroup(
+					huh.NewInput().Title("Choose a name for your project:").Value(&selectedName),
+					huh.NewInput().Title("Choose the domain/host to accept traffic for your project:").Validate(validateDomain).Value(&selectedDomain),
+				)).Run()
+				if ferr != nil {
+					log.Fatal("Error showing form.")
+					return nil
+				}
+
+				generatedConfig := map[string]string{
+					"Name" : selectedName,
+					"Domain" : selectedDomain,
+					"Src" : selectedRemote,
+				}
+				ba, gerr := json.MarshalIndent(generatedConfig, "", "    ")
+				if gerr != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println("Generated project config:")
+				fmt.Println(linkStyle.Render(string(ba)))
+				if !confirm("Would you like to add the above configuration entry to the remote's ray config?") {return nil}
+
+				var result map[string]any
+				jerr := json.Unmarshal([]byte(getOutputSpin(raysBinary + " rray-read-config", ctx.String("remote"))), &result)
+				if jerr != nil {
+					log.Fatal(err)
+				}
+				if _, ok := result["Projects"].([]any); !ok {
+					log.Fatal("failed asserting projects in remote config")
+				}
+
+				result["Projects"] = append(result["Projects"].([]any), generatedConfig)
+
+				ba, jeerr := json.MarshalIndent(result, "", "	")
+				if jeerr != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println("Saving changes.")
+				fmt.Print(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(ba), ctx.String("remote") ))
+				fmt.Println("Remember, you'll also need to run " + linkStyle.Render("rray reload") + " for the changes to take effect!")
+				return nil
+			},
+		  },
+		  {
 			Name: "config",
 			Description: "config allows you to edit the remote ray config",
 			Usage: "provide the -r flag to specify the remote server",
@@ -102,7 +190,8 @@ func main() {
 				log.Fatal("Failed creating local config file.")
 			  }
 
-			  _, readerr := file.WriteString(getOutputSpin(raysBinary + " rray-read-config", ctx.String("remote")))
+			  confReadOut := getOutputSpin(raysBinary + " rray-read-config", ctx.String("remote"))
+			  _, readerr := file.WriteString(strings.ReplaceAll(confReadOut, "\r", ""))
 			  if readerr != nil {
 				log.Fatal("Failed copying over config file from remote server.")
 			  }
@@ -124,7 +213,7 @@ func main() {
 					if err != nil {
 						log.Fatal("Failed reading local config file.")
 					}
-					fmt.Println(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(b), ctx.String("remote") ))
+					fmt.Print(getOutput(raysBinary + ` rray-edit-config ` + base64.StdEncoding.EncodeToString(b), ctx.String("remote")))
 					fmt.Println("Remember, you'll also need to run " + linkStyle.Render("rray reload") + " for the changes to take effect!")
 					file.Close(); os.Remove(file.Name())
 					return nil
