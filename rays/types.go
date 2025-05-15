@@ -63,7 +63,7 @@ type rlsConnection struct {
 type helperServer struct {
 	Host string
 	Name string
-	Weight int
+	Weight float64
 }
 type rlsConfig struct {
 	Helpers []helperServer

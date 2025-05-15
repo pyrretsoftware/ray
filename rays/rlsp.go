@@ -198,7 +198,7 @@ func getHelperServerConfigFromProcess(proc process) helperServer {
 	return foundHelperServer
 }
 
-func getRlsWeightArray(processList []process) []process {
+func getRlsWeightArray(processList []process) []process { //very shitty but very worky
 	var wa []process
 	for _, process := range processList {
 		weight := getHelperServerConfigFromProcess(process).Weight
@@ -206,7 +206,7 @@ func getRlsWeightArray(processList []process) []process {
 			weight = 1
 		}
 
-		for range weight {
+		for range int(weight * 100) {
 			wa = append(wa, process)
 		}
 	}

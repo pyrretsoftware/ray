@@ -1,6 +1,8 @@
 package main
 
-import "slices"
+import (
+	"slices"
+)
 
 var deploymentTypes = []string{
 	"dev",
@@ -31,6 +33,16 @@ func validateConfig(config rayconfig) {
 			} else {
 				rlog.Fatal("Fatal rayconfig error: two projects cannot reside on the same domain.")
 			}
+		}
+	}
+	validateHelperServers(config.RLSConfig.Helpers)
+}
+
+func validateHelperServers(servers []helperServer) {
+	for _, server := range servers {
+		weightInt := int(server.Weight * 10000)
+		if weightInt%100 != 0 {
+			rlog.Fatal("RLS weight can only be max two decimal places.")
 		}
 	}
 }
