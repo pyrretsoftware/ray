@@ -23,10 +23,12 @@ func trackProcess(cmd *exec.Cmd, process *process, buffer *strings.Builder) {
 		rlog.Notify(buffer.String(), "err")
 		process.State = buffer.String()
 		go triggerEvent("processError", *process)
+		go taskAutofix(*process)
 	} else {
 		rlog.Println("Process exited.")
 		process.State = "Exited without error."
 		go triggerEvent("processError", *process)
+		go taskAutofix(*process)
 	}
 	process.Active = false
 }
@@ -60,13 +62,12 @@ func waitForPortOpen(process *process) {
 
 func startUpdateCheck() {
 	for {
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 5)
 		updateChecker()
 	}
 }
 
 func updateChecker() {//we wont print anything if no updates are found, as to not fill up log files
-	var newProjects []project
 	for _, project := range rconf.Projects {
 		branches := getBranches(project.Src)
 		doUpdate := false
@@ -74,6 +75,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 		dplymnt := project.Deployments
 		dplymnt = append(dplymnt, deployment{
 			Type: "prod",
+			Branch: "prod", //removed this once because me stupid, NOT AGAIN!!!!!!!1
 		})
 
 		for _, deployment := range dplymnt {
@@ -84,17 +86,20 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 			process := getProcessFromBranch(deployment.Branch, project)
 			if (process == nil) {continue}
 
+			//if we're rolled back and not on the faulty version
+			if strings.HasPrefix(process.Hash, "rollback:") && strings.Replace(process.Hash, "rollback:", "", 1) == branches[deployment.Branch] {
+				continue
+			}
+
 			if (branches[deployment.Branch] != process.Hash) {
 				doUpdate = true
 			}
 		}
 		if (doUpdate) {
 			rlog.Println("Performing update on " + project.Name)
-			startProject(&project)
+			startProject(&project, "")
 		}
-		newProjects = append(newProjects, project)
 	}
-	rconf.Projects = newProjects
 }
 
 func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, s bool) {
@@ -130,7 +135,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		rlog.Fatal(err)
 	}
 	validateProjectConfig(config, *project)
-	project.ProjectConfig = config
+	process.ProjectConfig = &config
 
 	logPath := path.Join(logDir, "log-" + getUuid() + ".json")
 	var logFile logFile 
@@ -212,7 +217,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
 		} else if commandError == nil {
 			time.Sleep(2000 * time.Millisecond)
-			go func () {
+			go func () { //if the deploy process exits within 2100ms so we can check for it later, otherwise this goroutinue will keep running and doing nothing
 				cmd.Wait()
 				deployProcessExited = true
 			}()
@@ -224,19 +229,25 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			logBuffer.Write([]byte(message + "\n"))
 		}
 
+		//in case the step is of type build, commandError will be non nil if the os couldn't run the command or if the command errored
+		//in case the step is of type deploy, commandError will be non nil if the os couldn't run the command, and deployProcessExited true if it exited withing 2100ms
 		if (commandError != nil || (step.Type == "deploy" && deployProcessExited)) {
 			if (commandError != nil && strings.Contains(commandError.Error(), exec.ErrNotFound.Error())) {
 				buildErr("Failed to deploy " + project.Name + " (branch " + branch + "): the tool '" + step.Tool + "' used in the deployment pipeline may not be installed. Please install it and configure it in PATH.")
 				process.State = "ToolNotFound"
 			} else {
+				lbString := logBuffer.String()
+				if lbString == "" {
+					lbString = "(no output)"
+				}
+
 				buildErr("Failed to deploy " + project.Name + " (branch " + branch +", step " + strconv.Itoa((stepIndex + 1)) + "), is there an issue with your command or code?")
-				buildErr("Output:")
-				buildErr(logBuffer.String())
 				process.State = logBuffer.String()
+				rlog.BuildNotify("Output:", "err")
+				rlog.BuildNotify(lbString, "err")
 			}
 			process.Active = false
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, false)
-			go triggerEvent("processError", process)
 		} else {
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
@@ -270,6 +281,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
 		logFile.Success = false
 		go triggerEvent("processError", process)
+		go taskAutofix(process)
 	}
 	logB, err := json.Marshal(logFile)
 	if err != nil {
@@ -281,7 +293,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	processes = append(processes, &process)
 }
 
-func setupLocalProject(project *project, host string) []process {
+func setupLocalProject(project *project, host string, hardCommit string) []process {
 	validateDeployments(project.Deployments)
 
 	var oldprocesses []*process
@@ -294,15 +306,12 @@ func setupLocalProject(project *project, host string) []process {
 	var deployments = project.Deployments
 	deployments = append(deployments, deployment{
 		Type: "prod",
+		Branch: "prod",
 	})
 
 	branchHashes := getBranches(project.Src)
 	for _, deployment := range deployments {
-		var _dpl = deployment.Branch
-		if (_dpl == "") {
-			_dpl = "prod"
-		}
-		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + _dpl + ")")
+		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + deployment.Branch + ")")
 
 		procId := strings.ReplaceAll(project.Name, " ", "-") + "-" + getUuid()
 		dir := rdata.RayEnv + "/" + procId
@@ -326,6 +335,15 @@ func setupLocalProject(project *project, host string) []process {
 			rlog.Fatal(err)
 		}
 
+		if hardCommit != "" {
+			cmd := exec.Command("git", "reset", "--hard", hardCommit)
+			cmd.Dir = path.Join(dir, content[0].Name())
+			if err := cmd.Run(); err != nil {
+				rlog.Println(cmd.Args)
+				rlog.Fatal("git hard commit resetting error: " + err.Error())
+			}
+		}
+
 		os.Mkdir(path.Join(dir, "logs"), 0600)//Making sure to do this after we've cloned the repo
 	
 		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json"
@@ -341,12 +359,11 @@ func setupLocalProject(project *project, host string) []process {
 		}
 	
 		branch := deployment.Branch
-		if branch == "" {
-			branch = "prod"
-		}
 
 		branchHash := ""
-		if (branchHashes != nil && branchHashes[branch] != "") {
+		if hardCommit != "" {
+			branchHash = "rollback:" + branchHashes[branch] //the faulty version
+		} else if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
 		deployLocalProcess(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
@@ -361,14 +378,16 @@ func setupLocalProject(project *project, host string) []process {
 	return newProcesses
 }
 
-func startProject(project *project) {
+func startProject(project *project, hardCommit string) {
+	if strings.Contains(hardCommit, "rollback:") {rlog.Notify("Cannot rollback to a rollback", "warn"); return}
+
 	if slices.Contains(project.DeployOn, "local") {
-		setupLocalProject(project, "127.0.0.1")
+		setupLocalProject(project, "127.0.0.1", hardCommit)
 	}
 
 	for _, deploymentTarget := range project.DeployOn {
 		if deploymentTarget == "local" {continue}
-		go setupRlspProject(project, deploymentTarget)
+		go setupRlspProject(project, deploymentTarget, hardCommit)
 	}
 }
 
@@ -392,14 +411,11 @@ func SetupEnv() {
 		os.Remove(dotslash + "/clisocket.sock")
 		os.Exit(0)
 	}()	
-	var newProjects []project
 
 	for _, project := range rconf.Projects {
-		startProject(&project)
-		newProjects = append(newProjects, project)
+		startProject(&project, "")
 	}
 
-	rconf.Projects = newProjects
 	RLSinitalConnectionOver = true
 	validateConfig(*rconf)
 	go startUpdateCheck()

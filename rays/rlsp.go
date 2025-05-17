@@ -66,7 +66,8 @@ func attachRlspListener(rlsConn *rlsConnection) {
 				switch req.Action {
 				case "startProject":
 					hst, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
-					setupLocalProject(&req.Project, hst)
+					
+					setupLocalProject(&req.Project, hst, req.ProjectHardCommit)
 					involvedProcesses := rlspProcessReport(rlsConn.IP.String())
 
 					ba, err := json.Marshal(involvedProcesses)
@@ -112,6 +113,7 @@ func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) 
 				rlog.Notify("Failed marshaling json.", "err")
 				return
 			}
+			latestWorkingCommit[process.Project.Name] = process.Hash
 			sendRlspRequest(string(ba), rlsConn)
 		}
 		process.RLSInfo.Type = "outsourced"
@@ -153,6 +155,7 @@ func broadcastProcessReports() {
 					process.State = "Lost RLS Connection"
 					process.Active = false
 					go triggerEvent("processError", *process)
+					go taskAutofix(*process)
 				}
 				newProcesses = append(newProcesses, process)
 			}
@@ -217,7 +220,7 @@ func getRlsWeightArray(processList []process) []process { //very shitty but very
 func reloadRLSPProjects(rlsConn rlsConnection) {
 	for _, project := range rconf.Projects {
 		if !slices.Contains(project.DeployOn, rlsConn.Name) {continue}
-		startProject(&project)
+		startProject(&project, "")
 	}
 }
 
@@ -241,7 +244,7 @@ func sendRlspResponse(body string, goal rlsConnection, reqId string) {
 	conn.Write([]byte("response:" + reqId + "|" + body + "\n"))
 }
 
-func setupRlspProject(project *project, target string) {
+func setupRlspProject(project *project, target string, hardCommit string) {
 	rlog.Println("Setting up project " + project.Name + " for RLS (outsourced to " + target + ")")
 	var rlsConn rlsConnection
 	for _, _rlsConn := range rlsConnections {
@@ -258,6 +261,7 @@ func setupRlspProject(project *project, target string) {
 
 	ba, err := json.Marshal(RLSPRequest{
 		Action:  "startProject",
+		ProjectHardCommit: hardCommit,
 		Project: *project,
 	})
 	if err != nil {

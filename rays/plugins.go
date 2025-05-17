@@ -28,7 +28,7 @@ func generateStatus(project project) string {
 			up = false
 		}
 		listentingOn := `, Listenting on ` + proc.Project.Domain + `, `
-		if (proc.Project.ProjectConfig.NotWebsite) {
+		if (proc.ProjectConfig.NotWebsite) {
 			listentingOn = ", "
 		}
 		status.Processes = append(status.Processes, statusItem{

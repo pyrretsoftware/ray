@@ -33,7 +33,9 @@ func getUuid() string { //technically not a uuid ig
 
 func makeGhost(process *process) {
 	process.Ghost = true
+	process.Active = false
 	process.State = "drop"
+	latestWorkingCommit[process.Project.Name] = process.Hash
 	os.RemoveAll(process.Env)
 }
 

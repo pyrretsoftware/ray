@@ -19,7 +19,6 @@ type project struct {
 	ProdTypeIsDev bool
 	PluginImplementation string
 	Options map[string]string
-	ProjectConfig projectConfig
 	DeployOn []string
 }
 
@@ -49,7 +48,8 @@ type RLSipPair struct {
 type RLSPRequest struct {
 	Action string
 	Project project //only used when action is "startProject"
-	RemoveProcessTarget string //onlu used when action is "removeProcess"
+	ProjectHardCommit string //only used when action is "startProject"
+	RemoveProcessTarget string //only used when action is "removeProcess"
 	Processes []process
 }
 
@@ -85,7 +85,8 @@ type rayconfig struct {
 	TLS tlsConfig
 	EnableRayUtil bool
 	GitAuth gitAuth
-	RLSConfig rlsConfig 
+	RLSConfig rlsConfig
+	AutofixDisabled bool
 	Monitoring monitoringConfig
 }
 
@@ -132,6 +133,7 @@ type rlsInfo struct {
 }
 type process struct {
 	Project *project
+	ProjectConfig *projectConfig
 	Env string
 	Ghost bool
 	Port int

@@ -38,19 +38,40 @@ func getBranches(repo string) map[string]string { //returns map with branch:hash
 
 	branches := make(map[string]string)
 
-	body = bytes.ReplaceAll(body, []byte("\000"), []byte("¶"))
-	for _, line := range strings.Split(string(body), "\n") {
-		if (strings.Contains(line, "001e# ") || line == "0000") {continue}
-		
-		data := strings.Split(strings.Split(line, "¶")[0], " ")
-		if (!strings.Contains(data[1], "refs/heads") && data[1] != "HEAD") {continue}
+	reader := bytes.NewReader(body)
+	currentSection := 0
+	for reader.Len() != 0 {
+		buf := make([]byte, 4)
+		_, err := reader.Read(buf)
+		if err != nil{continue}
 
-		if (data[1] == "HEAD") {
-			data[1] = "prod"
+		readLength, perr := strconv.ParseInt(string(buf), 16, 0)
+		if perr != nil{continue}
+		if readLength == 0 { //flush packet
+			currentSection += 1
+			continue
 		}
-		data[1] = strings.ReplaceAll(data[1], "refs/heads/", "")
 
-		branches[data[1]] = data[0]
+		dataBuf := make([]byte, readLength - 4)//need to subtract 4 bc readLength includes itself in the length
+		_, rerr := reader.Read(dataBuf)
+		if rerr != nil{continue}
+
+		if currentSection == 0 { //service garbage we dont need
+			continue
+		} else if currentSection == 1 { //the actual data
+			ref := strings.Split(strings.Split(string(dataBuf), " ")[1], "\000")[0]
+			hash := strings.Split(string(dataBuf), " ")[0]
+
+			ref = strings.ReplaceAll(ref, "refs/heads/", "")
+			ref = strings.ReplaceAll(ref, "\n", "")
+			if (ref == "HEAD") {
+				ref = "prod"
+			}
+
+			branches[ref] = hash
+		} else { //what the hell
+			rlog.Println("waht")
+		}
 	}
 	return branches
 }

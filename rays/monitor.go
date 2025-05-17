@@ -34,7 +34,7 @@ var messageFuncs = map[string]func(params any) string{
 		prc, ok := params.(process)
 		if !ok {return "rayMonitoringError"}
 
-		return "❌ Process **" + prc.Project.Name + "**, deployment **" + prc.Branch + "** has errored! Reported exit reason/message: ```" + prc.State + "```"
+		return "❌ Process **" + prc.Project.Name + "**, deployment **" + prc.Branch + "** has errored! Reported exit reason/message: ```" + strings.ReplaceAll(strings.ReplaceAll(prc.State, "\n", "\\n"), "\r", "") + "```"
 	},
 	"projectNoRlsError" : func(params any) string {
 		prj, ok := params.(project)
@@ -74,6 +74,30 @@ var messageFuncs = map[string]func(params any) string{
 	},
 	"raysStart" : func(params any) string {
 		return "✅ Ray server has started!"
+	},
+	"autofixTasked" : func(params any) string {
+		prc, ok := params.(process)
+		if !ok {return "rayMonitoringError"}
+		
+		return "🔨 Autofix has been tasked to resolve the situation regarding process **" + prc.Id + "**." 
+	},
+	"autofixFailed" : func(params any) string {
+		prc, ok := params.(process)
+		if !ok {return "rayMonitoringError"}
+		
+		return "🔨 Autofix failed resolving the situation regarding process **" + prc.Id + "**." 
+	},
+	"autofixMeasureFailed" : func(params any) string {
+		measure, ok := params.(string)
+		if !ok {return "rayMonitoringError"}
+		
+		return "🔨 Autofix failed applying " + measure + ", trying another measure..." 
+	},
+	"autofixMeasureSuccess" : func(params any) string {
+		measure, ok := params.(string)
+		if !ok {return "rayMonitoringError"}
+		
+		return "🔨 Autofix has applied a temporary fix (" + measure + ") to quickly resolve this situation. Please immediately investigate the situation."
 	},
 }
 

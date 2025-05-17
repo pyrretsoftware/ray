@@ -351,7 +351,7 @@ func main() {
 					Action: func(ctx *cli.Context) error {
 						var options []huh.Option[string]
 
-						for option, _ := range hostsFile.StoredHosts {
+						for option := range hostsFile.StoredHosts {
 							options = append(options, huh.NewOption(option, option))
 						}
 

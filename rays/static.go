@@ -15,6 +15,7 @@ func serveStaticServer(srv *http.Server, process *process) {
 			process.Active = false
 			process.State = "Exited, " + err.Error()
 			go triggerEvent("processError", *process)
+			go taskAutofix(*process)
 			rlog.Notify(err, "err")
 		}
 	}
@@ -77,8 +78,6 @@ func staticServer(dir string, port int, process *process, redirects []rayserveRe
 
 	srv := &http.Server{Addr: ":" + strconv.Itoa(port), Handler: mux}
 	process.remove = func() {
-		process.Active = false
-		process.State = "drop"
 		makeGhost(process)
 		rlog.Println("Closing server...")
 		srv.Close()

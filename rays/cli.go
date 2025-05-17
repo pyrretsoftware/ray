@@ -189,7 +189,7 @@ func daemonHandleCommand(command cliCommand) []byte {
 		rconf = &config
 		
 		for _, project := range rconf.Projects {
-			startProject(&project)
+			startProject(&project, "")
 		}
 		return []byte("success\n")
 	case "FORCE_RE":
