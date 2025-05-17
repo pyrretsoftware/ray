@@ -88,6 +88,7 @@ type rayconfig struct {
 	RLSConfig rlsConfig
 	AutofixDisabled bool
 	Monitoring monitoringConfig
+	//MetricsEnabled bool //maybe 
 }
 
 type rayserveRedirect struct {
@@ -156,4 +157,11 @@ type logSection struct {
 	Name string
 	Log string
 	Success bool
+}
+
+type metricBucket struct {
+	TotalRequests int
+	Timestamp int64 //unix time minute
+	UniqueVisitors map[string]struct{}
+	Headers map[string]map[string]int //map: header : value : quantity
 }

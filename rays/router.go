@@ -60,6 +60,7 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 func startProxy() {
 	srv := &http.Server{Handler: &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
+			r.Out.Header.Add("Via", r.In.Proto + " ray-router")			
 			if r.In.Header.Get("x-rls-process") != "" {
 				fromHelperServer := false
 				rlsIp := net.ParseIP(strings.Split(r.In.RemoteAddr, ":")[0])
@@ -70,6 +71,7 @@ func startProxy() {
 						break
 					}
 				}
+				
 
 				if !fromHelperServer {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "SecurityBlock")
@@ -258,6 +260,7 @@ func startProxy() {
 		},
 		ModifyResponse: func(r *http.Response) error {
 			r.Header.Add("x-handled-by", "ray")
+			r.Header.Add("Via", r.Proto + " ray-router")
 
 			if chnl, ok := r.Request.Context().Value(rayChannelKey).(string); ok {
 				r.Header.Add("Set-Cookie", "ray-channel="+chnl+";Max-Age=31536000") //expires after 1 year
