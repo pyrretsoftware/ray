@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -41,14 +40,14 @@ func parse(content string) map[string][]string {
 func getProcessPorts(pid int) []string {
 	val, contains := platformCommand[runtime.GOOS]
 	if (!contains) {
-		fmt.Println("WARNING: Rays is running on an unsupported platform, and were not able the resolve certain process information.")
+		rlog.Notify("Rays is running on an unsupported platform, and were not able the resolve certain process information.", "warn")
 		return []string{}
 	}
 
 	cmd := exec.Command(val[0], val[1])
 	out, err := cmd.Output()
 	if (err != nil) {
-		fmt.Println("WARNING: Rays were not able to resolve certain process information.")
+		rlog.Notify("Rays were not able to resolve certain process information.", "warn")
 		return []string{}
 	}
 

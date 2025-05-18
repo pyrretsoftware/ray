@@ -114,7 +114,7 @@ func triggerEvent(event string, params any) {
 
 		_, err := http.Post(webhook.Url, "application/json", strings.NewReader(whFunc(msgFunc(params))))
 		if err != nil {
-			fmt.Println("Errora: ", err)
+			fmt.Println("Error sending monitor webhook request: ", err)
 		}
 	}
 }
