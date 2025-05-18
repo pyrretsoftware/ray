@@ -80,10 +80,6 @@ func validateProjectConfig(projectConfig projectConfig, project project) {
 		}
 	}
 
-	if projectConfig.Version == "" && Version == "v1.0.0" {
-		rlog.Notify("projectconfig error: project config does not specify a version, not required as of ray v1.0.0 but highly recommended and will be required in the future.", "warn")
-	}
-
 	if projectConfig.Pipeline[len(projectConfig.Pipeline)-1].Type != "deploy" {
 		rlog.Fatal("Fatal projectconfig error: last step in deployment pipeline needs to be of type deploy.")
 	}

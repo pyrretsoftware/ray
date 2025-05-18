@@ -49,7 +49,7 @@ func main() {
 	 Name: "rray",
 	  Usage: "connect to remote ray servers",
 	  Description: "utility for connecting and interacting with remote ray servers",
-	  Version: "1.0.0",
+	  Version: "2.0.0",
 	  Authors: []*cli.Author{
 		  {
 			  Name: "axell",
