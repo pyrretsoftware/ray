@@ -62,7 +62,7 @@ func waitForPortOpen(process *process) {
 
 func startUpdateCheck() {
 	for {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Minute)
 		updateChecker()
 	}
 }
