@@ -236,6 +236,11 @@ func startProxy() {
 					destUrl = "http://" + chosenServer.RLSInfo.IP + ":80"
 					r.Out.Header.Add("x-rls-process", chosenServer.Id)
 				}
+
+				if requestProject.Middleware != "" {
+					r.Out.Header.Add("x-middleware-dest", destUrl)
+					destUrl = "http://" + requestProject.Middleware
+				}
 				url, err := url.Parse(destUrl)
 
 				if err != nil {

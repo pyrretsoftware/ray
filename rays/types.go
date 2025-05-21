@@ -20,6 +20,7 @@ type project struct {
 	PluginImplementation string
 	Options map[string]string
 	DeployOn []string
+	Middleware string
 }
 
 type auth struct {
