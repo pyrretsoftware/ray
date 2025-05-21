@@ -366,7 +366,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		} else if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
-		deployLocalProcess(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
+		go deployLocalProcess(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
 	}
 
 	var newProcesses []process
