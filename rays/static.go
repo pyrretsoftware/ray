@@ -31,6 +31,7 @@ func (w wrappedResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 	if statusCode == 404 {
 		w.ResponseWriter.Write(w.NotFoundPage)
+		w.ResponseWriter.Header().Add("Content-Type", "text/html")
 		*w.WriteBlockage = true
 	}
 }
