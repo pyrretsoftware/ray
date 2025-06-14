@@ -335,6 +335,8 @@ func startProxy() {
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "process can be resolved but is refusing connection.")
 				} else if errorMsg == "" {
 					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
+					rlog.Notify("Unknown ray router error: ", "err")
+					rlog.Notify(errorCode, "err")
 				}
 			}
 			w.Write([]byte(errorContent))
