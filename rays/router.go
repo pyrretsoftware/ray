@@ -336,7 +336,7 @@ func startProxy() {
 				} else if errorMsg == "" {
 					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
 					rlog.Notify("Unknown ray router error: ", "err")
-					rlog.Notify(errorCode, "err")
+					rlog.Notify(err, "err")
 				}
 			}
 			w.Write([]byte(errorContent))
