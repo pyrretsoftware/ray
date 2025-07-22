@@ -33,9 +33,7 @@ func readConfigRaw() []byte {
 func readConfig() rayconfig {
 	_config := readConfigRaw()
 	var config rayconfig
-	if err := json.Unmarshal(_config, &config); err != nil {
-		rlog.Fatal(err)
-	}
+	rerr.Fatal("Failed parsing rayconfig: ", json.Unmarshal(_config, &config), true)
 
 	var modProjects []project
 	for _, project := range config.Projects {

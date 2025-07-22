@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -102,22 +101,38 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 	}
 }
 
-func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, s bool) {
+func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, success bool) {
 	logBuffer.WriteString("\nFinishing logging for this step\n")
 	file.Steps = append(file.Steps, logSection{
 		Name: step.Tool + " (Step " + strconv.Itoa(si + 1) + ")",
-		Success: s,
+		Success: success,
 		Log: logBuffer.String(),
 	})
 }
 
+func finishProcess(logFile logFile, process process, project project, branch string, logPath string) {
+	logFile.Name = project.Name + " (branch " + branch + ")"
+	if (process.Active && process.State == "OK") {
+		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
+		logFile.Success = true
+		go triggerEvent("newProcess", process)
+	} else {
+		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
+		logFile.Success = false
+		go triggerEvent("processError", process)
+		go taskAutofix(process)
+	}
+	logB, err := json.Marshal(logFile)
+	if err != nil {
+		rlog.Println("Failed encoding log file.")
+	} else {
+		err := os.WriteFile(logPath, logB, 0600)
+		rerr.Notify("Failed writing log file.", err)
+	}
+}
+
 func deployLocalProcess(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {
 	rlog.BuildNotify("Attempting to launch " + project.Name + " (deployment " + branch + ")", "info")
-	_config, err := os.ReadFile(configPath)
-	if (err != nil) {
-		rlog.Fatal(err)
-	}
-
 	var config projectConfig
 	var process process
 
@@ -125,26 +140,57 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	process.Hash = branchHash
 	process.Id = procId
 	process.RLSInfo.IP = RLSHost
+	process.Project = project
+	process.Env = envDir
+	process.Active = true
+	process.State = "OK"
 	if RLSHost == "127.0.0.1" {
 		process.RLSInfo.Type = "local"
 	} else {
 		process.RLSInfo.Type = "adm"
 	}
 
-	if err := json.Unmarshal(_config, &config); err != nil {
-		rlog.Fatal(err)
-	}
-	validateProjectConfig(config, *project)
-	process.ProjectConfig = &config
-
 	logPath := path.Join(logDir, "log-" + getUuid() + ".json")
 	var logFile logFile 
-
-	process.Project = project
-	process.Env = envDir
-	process.Active = true
-	process.State = "OK"
 	process.LogFile = logPath
+
+	
+	//step 0: config validation and preperation
+	var stepZeroLogBuffer strings.Builder
+	stepZeroSuccess := false
+	;func () {
+		if _, err := os.Stat(configPath); err != nil {
+			stepZeroLogBuffer.WriteString("No ray.config.json file found.")
+			return
+		}
+		_config, err := os.ReadFile(configPath)
+		if (err != nil) {
+			stepZeroLogBuffer.WriteString("Could not read project config.")
+			return
+		}
+		if err := json.Unmarshal(_config, &config); err != nil {
+			stepZeroLogBuffer.WriteString("Failed parsing project config, json unmarshaling error: " + err.Error())
+			return
+		}
+		
+		verr := validateProjectConfig(config, *project)
+		if verr != nil {
+			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr.Error())
+			return
+		}
+		rlog.Println("we got here")
+		stepZeroSuccess = true
+		process.ProjectConfig = &config
+	}();
+	finishLogSection(&stepZeroLogBuffer, &logFile, -1, pipelineStep{Tool: "Initial preperation and validation"}, stepZeroSuccess)
+	if !stepZeroSuccess {
+		process.Active = false
+		process.State = stepZeroLogBuffer.String()
+		finishProcess(logFile, process, *project, branch, logPath)
+		processes = append(processes, &process)
+		return
+	}
+
 	if (!config.NotWebsite) {
 		process.Port = pickPort()
 	}
@@ -179,10 +225,6 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		cmd := exec.Command(step.Tool, step.Command...)
 		cmd.Dir = commandDir
 		cmd.Env = cmd.Environ()
-
-		if (err != nil) {
-			log.Panic("error getting stderr.")
-		}
 
 		process.remove = func() {
 			makeGhost(&process)
@@ -272,24 +314,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		}
 	}
 
-	logFile.Name = project.Name + " (branch " + branch + ")"
-	if (process.Active && process.State == "OK") {
-		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
-		logFile.Success = true
-		go triggerEvent("newProcess", process)
-	} else {
-		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
-		logFile.Success = false
-		go triggerEvent("processError", process)
-		go taskAutofix(process)
-	}
-	logB, err := json.Marshal(logFile)
-	if err != nil {
-		rlog.Println("Failed encoding log file.")
-	} else {
-		err := os.WriteFile(logPath, logB, 0600)
-		rerr.Notify("Failed writing log file.", err)
-	}
+	finishProcess(logFile, process, *project, branch, logPath)
 	processes = append(processes, &process)
 }
 
@@ -327,11 +352,12 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		cmd.Dir = dir
 		if err := cmd.Run(); err != nil {
 			rlog.Println(cmd.Args)
-			rlog.Fatal("git cloning error: " + err.Error())
+			rlog.Notify("Git cloning error: " + err.Error(), "err")
+			continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
 		}
 	
 		content, err := os.ReadDir(dir)
-		if (err != nil) {
+		if err != nil {
 			rlog.Fatal(err)
 		}
 
@@ -340,16 +366,14 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 			cmd.Dir = path.Join(dir, content[0].Name())
 			if err := cmd.Run(); err != nil {
 				rlog.Println(cmd.Args)
-				rlog.Fatal("git hard commit resetting error: " + err.Error())
+				rlog.Notify("Git hard commit resetting error: " + err.Error(), "err")
+				continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
 			}
 		}
 
 		os.Mkdir(path.Join(dir, "logs"), 0600)//Making sure to do this after we've cloned the repo
 	
-		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json"
-		if _, err := os.Stat(projectConfig); err != nil {
-			rlog.Fatal("No ray.config.json file found in project.")
-		}
+		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json" //the existance of this file is checked later dw
 		rm := func() {
 			for _, proc := range oldprocesses {
 				if (!proc.Ghost) {
