@@ -102,7 +102,7 @@ type pipelineOptions struct {
 	IfAvailable bool //Whether or the command is optional based on if its available on the current system.
 	EnvVar map[string]string //enviroment variables to pass the command
 	RayserveRedirects []rayserveRedirect
-	RayserveDisableDirListing bool //whether or not to disable rayserve redirect listings
+	RayserveDisableDirListing bool //whether or not to disable rayserve directory listings
 }
 type pipelineStep struct {
 	Tool string
