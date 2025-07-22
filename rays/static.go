@@ -62,10 +62,10 @@ func rayserveFileServer(rootDir string, notFoundPage []byte, listingsDisabled bo
 
 		doRedirect := false
 		redirPath := ""
-		if (strings.HasSuffix(r.URL.Path, "/index.html")) {
+		if strings.HasSuffix(r.URL.Path, "/index.html") {
 			redirPath = "./"
 			doRedirect = true
-		} else if (fileInfo.IsDir() && !strings.HasSuffix(r.URL.Path, "/")) {
+		} else if fileInfo.IsDir() && !strings.HasSuffix(r.URL.Path, "/") {
 			redirPath = fileInfo.Name() + "/"
 			doRedirect = true
 		}
