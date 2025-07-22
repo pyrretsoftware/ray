@@ -206,7 +206,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 
 		if (BuiltIntool == "rayserve" && !config.NotWebsite) {
 			(*swapfunction)()
-			staticServer(commandDir, process.Port, &process, step.Options.RayserveRedirects)
+			staticServer(commandDir, process.Port, &process, step.Options.RayserveRedirects, step.Options.RayserveDisableDirListing)
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, true)
 			continue
 		}

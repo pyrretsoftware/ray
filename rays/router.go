@@ -329,14 +329,17 @@ func startProxy() {
 			w.WriteHeader(500)
 			if errorContent == "" {
 				errorMsg := errorCodes[strings.Split(errorCode, ":")[len(strings.Split(errorCode, ":"))-1]]
-				if errorMsg == "HostNotFound" {
+				switch errorMsg {
+				case "HostNotFound":
 					errorContent = getV2ErrorPage("working", "working", "nonexistant", "cantResolve", "host not found")
-				} else if errorMsg == "ProcessOffline" {
+				case "ProcessOffline":
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "process can be resolved but is refusing connection.")
-				} else if errorMsg == "" {
+				case "":
 					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
-					rlog.Notify("Unknown ray router error: ", "err")
-					rlog.Notify(err, "err")
+					if err.Error() != "context canceled" {
+						rlog.Notify("Unknown ray router error: ", "err")
+						rlog.Notify(err, "err")
+					}
 				}
 			}
 			w.Write([]byte(errorContent))
