@@ -2,9 +2,11 @@ package main
 
 import (
 	"os"
+	_ "embed"
 )
 
-var Version = "unknown version"
+//go:embed version
+var Version string
 
 func main() {
 	assignDotSlash()
