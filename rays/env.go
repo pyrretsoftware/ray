@@ -290,6 +290,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			}
 			process.Active = false
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, false)
+			break
 		} else {
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
