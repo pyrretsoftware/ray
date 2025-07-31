@@ -118,8 +118,18 @@ func handleCommand(args []string) {
 			fmt.Println(formatProcessList(process))
 		}
 	case "reload":
-		rlog.Println("Reloading processes")
+		rlog.Println("Updating config file and restarting processes")
 		data := cliSendCommand("RELOAD", nil)
+		if (string(data) == "success\n") {
+			rlog.Notify("Reloaded successfully.", "done")
+			os.Exit(0)
+		} else {
+			rlog.Println("Rays did not indicate success in reloading processes, please check the status of the server.")
+			os.Exit(1)
+		}
+	case "update":
+		rlog.Println("Updating config file and restarting necessary processes")
+		data := cliSendCommand("UPDATE", nil)
 		if (string(data) == "success\n") {
 			rlog.Notify("Reloaded successfully.", "done")
 			os.Exit(0)
@@ -191,6 +201,12 @@ func daemonHandleCommand(command cliCommand) []byte {
 		for _, project := range rconf.Projects {
 			startProject(&project, "")
 		}
+		return []byte("success\n")
+	case "UPDATE":
+		config := readConfig()
+		rconf = &config
+		
+		updateProjects(true)
 		return []byte("success\n")
 	case "FORCE_RE":
 		rconf.ForcedRenrollment = time.Now().Unix()

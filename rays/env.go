@@ -62,11 +62,11 @@ func waitForPortOpen(process *process) {
 func startUpdateCheck() {
 	for {
 		time.Sleep(time.Minute)
-		updateChecker()
+		updateProjects(false)
 	}
 }
 
-func updateChecker() {//we wont print anything if no updates are found, as to not fill up log files
+func updateProjects(updateRollbacks bool) {//we wont print anything if no updates are found, as to not fill up log files
 	for _, project := range rconf.Projects {
 		branches := getBranches(project.Src)
 		doUpdate := false
@@ -86,7 +86,7 @@ func updateChecker() {//we wont print anything if no updates are found, as to no
 			if (process == nil) {continue}
 
 			//if we're rolled back and not on the faulty version
-			if strings.HasPrefix(process.Hash, "rollback:") && strings.Replace(process.Hash, "rollback:", "", 1) == branches[deployment.Branch] {
+			if strings.HasPrefix(process.Hash, "rollback:") && strings.Replace(process.Hash, "rollback:", "", 1) == branches[deployment.Branch] && !updateRollbacks {
 				continue
 			}
 
