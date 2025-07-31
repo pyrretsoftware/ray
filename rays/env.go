@@ -122,7 +122,7 @@ func finishProcess(logFile logFile, process process, project project, branch str
 		go triggerEvent("processError", process)
 		go taskAutofix(process)
 	}
-	logB, err := json.Marshal(logFile)
+	logB, err := json.MarshalIndent(logFile, "", "    ")
 	if err != nil {
 		rlog.Println("Failed encoding log file.")
 	} else {
