@@ -178,7 +178,6 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr.Error())
 			return
 		}
-		rlog.Println("we got here")
 		stepZeroSuccess = true
 		process.ProjectConfig = &config
 	}();
@@ -349,10 +348,15 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 			_cmd = append(_cmd, deployment.Branch)
 		}
 		
+		gitOutput := strings.Builder{}
 		cmd := exec.Command("git", _cmd...)
 		cmd.Dir = dir
+		cmd.Stdout = &gitOutput
+		cmd.Stderr = &gitOutput
+		
 		if err := cmd.Run(); err != nil {
-			rlog.Println(cmd.Args)
+			rlog.Println(_cmd)
+			rlog.Println(gitOutput.String())
 			rlog.Notify("Git cloning error: " + err.Error(), "err")
 			continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
 		}
