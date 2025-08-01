@@ -14,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/natefinch/npipe"
 )
 
 type routerContextKey string
@@ -294,7 +292,7 @@ func startProxy() {
 				if udsp == "" {
 					return net.Dial("tcp", addr)
 				} else if strings.HasPrefix(udsp.(string), `\\.\pipe\`) {
-					return npipe.Dial(udsp.(string))
+					return DialNamedPipe(udsp.(string))
 				} else {
 					return net.Dial("unix", udsp.(string))
 				}
