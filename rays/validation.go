@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"slices"
 )
 
@@ -70,19 +69,19 @@ func validateDeployments(deployments []deployment) {
 	}
 }
 
-func validateProjectConfig(projectConfig projectConfig, project project) error {
+func validateProjectConfig(projectConfig projectConfig, project project) string {
 	if (projectConfig.NotWebsite) {
 		if project.Domain != "" {
-			return errors.New("Fatal projectconfig error: project that's not a website cannot have a domain defined.")
+			return "Fatal projectconfig error: project that's not a website cannot have a domain defined."
 		}
 
 		if project.PluginImplementation != "" {
-			return errors.New("Fatal projectconfig error: project that's not a website cannot implement a plugin.")
+			return "Fatal projectconfig error: project that's not a website cannot implement a plugin."
 		}
 	}
 
 	if projectConfig.Pipeline[len(projectConfig.Pipeline)-1].Type != "deploy" {
-		return errors.New("Fatal projectconfig error: last step in deployment pipeline needs to be of type deploy.")
+		return "Fatal projectconfig error: last step in deployment pipeline needs to be of type deploy."
 	}
 
 	alwaysRanDeploySteps := 0
@@ -92,12 +91,12 @@ func validateProjectConfig(projectConfig projectConfig, project project) error {
 		}
 
 		if (step.Type != "deploy" && step.Type != "build") {
-			return errors.New("Fatal projectconfig error: only valid pipeline step types are 'deploy' and 'build'.")
+			return "Fatal projectconfig error: only valid pipeline step types are 'deploy' and 'build'."
 		}
 	}
 
 	if (alwaysRanDeploySteps > 1) {
-		return errors.New("Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be ran.")
+		return "Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be ran."
 	}
-	return nil
+	return ""
 }

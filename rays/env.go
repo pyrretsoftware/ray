@@ -174,8 +174,8 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		}
 		
 		verr := validateProjectConfig(config, *project)
-		if verr != nil {
-			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr.Error())
+		if verr != "" {
+			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr)
 			return
 		}
 		stepZeroSuccess = true
