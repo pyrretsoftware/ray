@@ -227,8 +227,12 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 
 		process.remove = func() {
 			makeGhost(&process)
-			err := cmd.Process.Kill()
-			rerr.Notify("Process kill error: ", err, true)
+			if cmd.Process != nil {
+				err := cmd.Process.Kill()
+				rerr.Notify("Process kill error: ", err, true)
+			} else {
+				rlog.Notify("Did not kill process, it did not exist in the first place.", "warn")
+			}
 		}
 
 		for field, val := range project.EnvVars {

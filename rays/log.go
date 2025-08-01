@@ -15,6 +15,7 @@ type loggerType struct {
 	Notify func(any, string)
 	Println func(any)
 	Fatal func(any)
+	Debug func(any)
 	BuildNotify func(any, string)
 }
 
@@ -23,6 +24,7 @@ var logTypes = map[string]string{
 	"warn":  "[\x1b[33m!\x1b[0m]",
 	"done":  "[\x1b[32m✓\x1b[0m]",
 	"err": "[\x1b[31mx\x1b[0m]",
+	"debug" : "[\x1b[33m<\x1b[0m]",
 }
 
 var logSources = map[string]string{
@@ -42,6 +44,11 @@ var rlog = loggerType{
 	},
 	Println: func(s any) {
 		logwrite(s, "info", "standard")
+	},
+	Debug: func (s any) {
+		if DebugLogsEnabled {
+			logwrite(s, "debug", "standard")
+		}
 	},
 	Fatal: func (s any)  {
 		logwrite(s, "err", "standard")

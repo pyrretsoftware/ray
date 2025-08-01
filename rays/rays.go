@@ -7,6 +7,7 @@ import (
 
 //go:embed version
 var Version string
+var DebugLogsEnabled bool
 
 func main() {
 	assignDotSlash()
@@ -18,10 +19,17 @@ func main() {
 	}
 
 	if (os.Args[1] == "daemon") {
+		for _, arg := range os.Args {
+			if arg == "-d" || arg == "--show-debug" {
+				DebugLogsEnabled = true
+				break
+			}
+		}
 		_cnf := readConfig()
 		rconf = &_cnf
 		
 		rlog.Println("Ray server daemon launched.")
+		rlog.Debug("Debug messages are shown.")
 		go triggerEvent("raysStart", nil)
 		rlog.Println("Setting up ray enviroument...")
 		initRLS()
