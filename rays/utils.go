@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -57,7 +58,7 @@ func assignDotSlash() {
 	exc, err := os.Executable()
 	rerr.Fatal("Cant get current executable: ", err, true)
 
-	dotslash = path.Join(path.Dir(exc), "ray-env")
+	dotslash = path.Join(filepath.Dir(exc), "ray-env")
 }
 
 func getProcessFromBranch(branch string, project project) *process {

@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,13 +40,20 @@ func incorrectPortUsage(process *process, actualPort string) {
 	rlog.Notify("Please make sure your application listens to connections according to the ray-port enviroument variable.", "err")
 }
 
-func waitForPortOpen(process *process) {
+//this method also handles when the process uses a UDS socket
+func waitForProcessListen(process *process, udspath string) {
 	waited := 0
 	var ports []string
 	for (len(ports) == 0 && waited < 100) {
 		time.Sleep(500 * time.Millisecond)
 		waited += 1
 		ports = getProcessPorts(process.Processes[0])
+		
+		if _, err := os.Stat(udspath); err == nil {
+			process.UnixSocketPath = udspath
+			rlog.Notify("Process has created a unix socket, now using UDS for this process.", "done")
+			return
+		}
 	}
 
 	if (len(ports) == 0) {
@@ -56,6 +65,8 @@ func waitForPortOpen(process *process) {
 	if (ports[0] != strconv.Itoa(process.Port)) {
 		incorrectPortUsage(process, ports[0])
 		return
+	} else {
+		rlog.Notify("Process correctly listens to connections from the instructed port.", "done")
 	}
 }
 
@@ -241,9 +252,14 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		for field, val := range step.Options.EnvVar {
 			cmd.Env = append(cmd.Env, field + "=" + val)
 		}
+		udspath := "/dev/shm/ray-" + procId + "/"
+		if runtime.GOOS == "windows" {
+			udspath = "\\\\.\\pipe\\" + procId + "\\"
+		}
 		if (!config.NotWebsite) {
 			cmd.Env = append(cmd.Env, "ray-port=" + strconv.Itoa(process.Port))
 			cmd.Env = append(cmd.Env, "RAY_PORT=" + strconv.Itoa(process.Port))
+			cmd.Env = append(cmd.Env, "RAY_SOCK_PATH=" + udspath)
 		}
 		cmd.Env = append(cmd.Env, "RAY_DEPLOYMENT=" + process.Branch)
 
@@ -301,17 +317,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 				go trackProcess(cmd, &process, &logBuffer)
 
 				if (config.NotWebsite) {break}
-				ports := getProcessPorts(cmd.Process.Pid)
-				if (len(ports) > 0) {
-					if (!slices.Contains(ports, strconv.Itoa(process.Port))) {
-						incorrectPortUsage(&process, ports[0])
-					} else {
-						rlog.Notify("Process correctly listens to connections from the instructed port.", "done")
-					}
-				} else {
-					rlog.Println("Process has not yet started listening for connections.")
-					go waitForPortOpen(&process)
-				}
+				go waitForProcessListen(&process, udspath)
 
 				break
 			}
@@ -343,7 +349,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		rlog.Println("Setting up enviroument for " + project.Name + " (deployment " + deployment.Branch + ")")
 
 		procId := strings.ReplaceAll(project.Name, " ", "-") + "-" + getUuid()
-		dir := rdata.RayEnv + "/" + procId
+		dir := filepath.Join(rdata.RayEnv, procId)
 		os.Mkdir(dir, 0600)
 
 		_cmd := []string{"clone", project.Src}
@@ -382,7 +388,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 
 		os.Mkdir(path.Join(dir, "logs"), 0600)//Making sure to do this after we've cloned the repo
 	
-		projectConfig := dir + "/" + content[0].Name() + "/" + "ray.config.json" //the existance of this file is checked later dw
+		projectConfig := filepath.Join(dir, content[0].Name(), "ray.config.json") //the existance of this file is checked later dw
 		rm := func() {
 			for _, proc := range oldprocesses {
 				if (!proc.Ghost) {
@@ -399,7 +405,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		} else if (branchHashes != nil && branchHashes[branch] != "") {
 			branchHash = branchHashes[branch]
 		}
-		go deployLocalProcess(projectConfig, dir + "/" + content[0].Name(), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
+		go deployLocalProcess(projectConfig, filepath.Join(dir, content[0].Name()), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
 	}
 
 	var newProcesses []process

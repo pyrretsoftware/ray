@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"math"
 	"math/rand/v2"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/natefinch/npipe"
 )
 
 type routerContextKey string
@@ -20,6 +23,7 @@ type routerContextKey string
 const (
 	rayChannelKey       routerContextKey = "ray-channel"
 	raySpecialBehaviour routerContextKey = "ray-behaviour"
+	rayUnixSocketPath	routerContextKey = "ray-uds-p"
 	rayUtilMessage      routerContextKey = "rayutil-message"
 	rayUtilIcon         routerContextKey = "rayutil-icon"
 )
@@ -87,6 +91,7 @@ func startProxy() {
 						}
 
 						r.SetURL(finalUrl)
+						
 						return
 					}
 				}
@@ -231,12 +236,23 @@ func startProxy() {
 				index := int(math.Floor(ipSum * float64(len(weightArray)) / 1020))
 				chosenServer := weightArray[index]
 
+				//default: local server over tcp
 				destUrl := "http://127.0.0.1:" + strconv.Itoa(chosenServer.Port)
+				destUds := ""
+
+				//local server over uds
+				if chosenServer.UnixSocketPath != "" {
+					destUrl = "http://unix"
+					destUds = chosenServer.UnixSocketPath
+				}
+
+				//remote server over tcp (rls does not support udp when communicating between servers, and uds can only be used with rls at local server level, see above)
 				if chosenServer.RLSInfo.Type == "outsourced" {
 					destUrl = "http://" + chosenServer.RLSInfo.IP + ":80"
 					r.Out.Header.Add("x-rls-process", chosenServer.Id)
 				}
 
+				//middleware over tcp
 				if requestProject.Middleware != "" {
 					r.Out.Header.Add("x-middleware-dest", destUrl)
 					destUrl = "http://" + requestProject.Middleware
@@ -246,6 +262,9 @@ func startProxy() {
 				if err != nil {
 					return
 				}
+
+				transportContext := context.WithValue(r.Out.Context(), rayUnixSocketPath, destUds)
+				r.Out = r.Out.WithContext(transportContext)
 				r.SetURL(url)
 			}
 
@@ -262,6 +281,24 @@ func startProxy() {
 				tryRoute()
 				triedTimes += 1
 			}
+		},
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				udsp := ctx.Value(rayUnixSocketPath)
+				if udsp == nil {
+					return nil, errors.New("could not get transport: ")
+				} else if _, ok := udsp.(string); !ok {
+					return nil, errors.New("transport is not string")
+				}
+
+				if udsp == "" {
+					return net.Dial("tcp", addr)
+				} else if strings.HasPrefix(udsp.(string), `\\.\pipe\`) {
+					return npipe.Dial(udsp.(string))
+				} else {
+					return net.Dial("unix", udsp.(string))
+				}
+			},
 		},
 		ModifyResponse: func(r *http.Response) error {
 			r.Header.Add("x-handled-by", "ray")

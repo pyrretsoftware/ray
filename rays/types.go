@@ -140,6 +140,7 @@ type process struct {
 	Env string
 	Ghost bool
 	Port int
+	UnixSocketPath string //if this is assigned, it overrides Port
 	Processes []int
 	Active bool
 	State string
