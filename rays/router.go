@@ -343,17 +343,18 @@ func startProxy() {
 			errorCode := err.Error()
 			errorContent := ""
 			if beh, ok := r.Context().Value(raySpecialBehaviour).(string); ok {
-				if beh == "RequestAuth" {
+				switch beh {
+				case "RequestAuth":
 					w.WriteHeader(401)
 					w.Write([]byte(loginPage))
 					return
-				} else if beh == "AuthError" {
+				case "AuthError":
 					errorContent = getV2ErrorPage("invalid auth", "working", "working", "requestIssue", "invalid dev channel authentication. clear your cookies and try again.")
-				} else if beh == "RLSError" {
+				case "RLSError":
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "rls related process error, the rls server is likely offline.")
-				} else if beh == "SecurityBlock" {
+				case "SecurityBlock":
 					errorContent = getV2ErrorPage("request blocked", "working", "working", "requestIssue", "your request was blocked for security reasons.")
-				} else if beh == "ProcessError" {
+				case "ProcessError":
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "non-rls related process error, likely an application issue.")
 				}
 			}
