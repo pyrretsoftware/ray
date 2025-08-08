@@ -434,10 +434,13 @@ var rconf *rayconfig
 var rdata raydata
 func SetupEnv() {
 	os.Mkdir(dotslash, 0600)
-	os.Mkdir(dotslash + "/projects", 0600)
-	os.Mkdir(dotslash + "/ray-certs", 0600)
+	if _, err := os.Stat(filepath.Join(dotslash, "projects")); err == nil {
+		os.RemoveAll(filepath.Join(dotslash, "projects"))
+	}
+	os.Mkdir(filepath.Join(dotslash, "projects"), 0600)
+	os.Mkdir(filepath.Join(dotslash, "ray-certs"), 0600)
 
-	rdata.RayEnv = dotslash + "/projects/ray-env-" + getUuid()
+	rdata.RayEnv = filepath.Join(dotslash, "projects", "ray-env-" + getUuid())
 	os.Mkdir(rdata.RayEnv, 0600)
 	go func() {
 		chnl := make(chan os.Signal)
