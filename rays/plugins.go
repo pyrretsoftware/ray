@@ -27,13 +27,13 @@ func generateStatus(project project) string {
 		if !proc.Active {
 			up = false
 		}
-		listentingOn := `, Listenting on ` + proc.Project.Domain + `, `
+		listentingOn := `, Listenting on ` + proc.project.Domain + `, `
 		if (proc.ProjectConfig.NotWebsite) {
 			listentingOn = ", "
 		}
 		status.Processes = append(status.Processes, statusItem{
 			Running: proc.Active,
-			Text:    proc.Project.Name + " (" + proc.Branch + " channel)",
+			Text:    proc.project.Name + " (" + proc.Branch + " channel)",
 			Subtext: "Git hash: " + strings.TrimLeft(proc.Hash, "0")[:8] + listentingOn + strconv.Itoa(len(proc.Processes)) + " Running process.",
 		})
 	}

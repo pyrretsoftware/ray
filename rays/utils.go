@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"io"
 	"math/rand/v2"
 	"net"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
 func checkPerms() bool {
@@ -29,15 +29,33 @@ func getUuid() string { //technically not a uuid ig
 		uuid = uuid + hex.EncodeToString(section) + "-"
 	}
 
-	return uuid[:len(strings.Split(uuid, ""))-1]
+	return uuid
 }
 
 func makeGhost(process *process) {
 	process.Ghost = true
 	process.Active = false
 	process.State = "drop"
-	latestWorkingCommit[process.Project.Name] = process.Hash
+	latestWorkingCommit[process.project.Name] = process.Hash
 	os.RemoveAll(process.Env)
+}
+
+type ReadWaiter struct {
+	w io.Writer
+	close chan bool
+}
+
+func (w ReadWaiter) Write(p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+
+func (w ReadWaiter) Close() (err error) {
+	w.close <- true
+	return 
+}
+
+func (w ReadWaiter) YieldClose() {
+	<- w.close
 }
 
 func pickPort() int {
@@ -63,7 +81,7 @@ func assignDotSlash() {
 
 func getProcessFromBranch(branch string, project project) *process {
 	for _, process := range processes {
-		if (process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop") {
+		if (process.project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop") {
 			return process
 		}
 	}

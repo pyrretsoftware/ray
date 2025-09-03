@@ -28,7 +28,7 @@ func formatProcessList(process process) string {
 	} else {
 		state = " ❌ (error)"
 	}
-	var content = process.Project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
+	var content = process.project.Name + state + ". " + strconv.Itoa(len(process.Processes)) + " active processes."
 
 	for indx, process := range process.Processes {
 		content += "\n- PID (process " + strconv.Itoa(indx + 1) + "): "+ strconv.Itoa(process)

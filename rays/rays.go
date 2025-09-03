@@ -33,7 +33,7 @@ func main() {
 		go triggerEvent("raysStart", nil)
 		rlog.Println("Setting up ray enviroument...")
 		initRLS()
-		go daemonListen()
+		//go daemonListen()
 		SetupEnv()
 		startProxy()
 		select {}

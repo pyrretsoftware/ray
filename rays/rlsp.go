@@ -15,6 +15,7 @@ func attachRlspListener(rlsConn *rlsConnection) {
 	conn := *rlsConn.Connection
 	var receivedResponses map[string]string = map[string]string{}
 
+	//TODO: use go channels instead of this piece of shit
 	grfunc := func(id string) []byte {
 		for {
 			if resp, ok := receivedResponses[id]; ok {
@@ -49,12 +50,18 @@ func attachRlspListener(rlsConn *rlsConnection) {
 			}
 			rString = strings.ReplaceAll(rString, "\n", "")
 
-			header := strings.Split(rString, "|")[0]
-			body := strings.Split(rString, "|")[1]
+			pipeSplit := strings.Split(rString, "|")
+			if len(pipeSplit) < 2 {
+				rlog.Notify("Invalid RLS packet received.", "err")
+				continue
+			}
+			header := pipeSplit[0]
+			body := pipeSplit[1]
 
-			if strings.Split(header, ":")[0] == "response" {
-				receivedResponses[strings.Split(header, ":")[1]] = body
-			} else if strings.Split(header, ":")[0] == "request" {
+			colonSplit := strings.Split(header, ":")
+			if colonSplit[0] == "response" {
+				receivedResponses[colonSplit[1]] = body
+			} else if colonSplit[0] == "request" {
 				var req RLSPRequest
 
 				err := json.Unmarshal([]byte(body), &req)
@@ -75,10 +82,10 @@ func attachRlspListener(rlsConn *rlsConnection) {
 						rlog.Notify("Failed marshaling json: "+err.Error(), "err")
 						continue
 					}
-					sendRlspResponse(string(ba), *rlsConn, strings.Split(header, ":")[1])
+					sendRlspResponse(string(ba), *rlsConn, colonSplit[1])
 				case "processReport":
 					handleRlspProcessReport(req.Processes, *rlsConn)
-					sendRlspResponse("alright"+"\n", *rlsConn, strings.Split(header, ":")[1])
+					sendRlspResponse("alright"+"\n", *rlsConn, colonSplit[1])
 				case "removeProcess":
 					for _, process := range processes {
 						if process.Id == req.RemoveProcessTarget {
@@ -113,7 +120,7 @@ func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) 
 				rlog.Notify("Failed marshaling json.", "err")
 				return
 			}
-			latestWorkingCommit[process.Project.Name] = process.Hash
+			latestWorkingCommit[process.project.Name] = process.Hash
 			sendRlspRequest(string(ba), rlsConn)
 		}
 		process.RLSInfo.Type = "outsourced"

@@ -80,6 +80,17 @@ type monitoringConfig struct {
 	TriggerOn []string //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
 }
 
+type Key struct {
+	Type string //for later features, always set to 'hardcode' for now
+	Key string //the actual key, if type is hardcode
+	Permissons []string //a list of permissons to give. The key defaults to no permissons.
+	DisplayName string //a display name for the key, like who or what uses it. 
+}
+type ComConfig struct {
+	Lines []HTTPComLine
+	Keys []Key
+}
+
 type rayconfig struct {
 	Projects []project
 	ForcedRenrollment int64
@@ -89,7 +100,8 @@ type rayconfig struct {
 	RLSConfig rlsConfig
 	AutofixDisabled bool
 	Monitoring monitoringConfig
-	//MetricsEnabled bool //maybe 
+	Com ComConfig
+	//MetricsEnabled bool //maybe
 }
 
 type rayserveRedirect struct {
@@ -135,7 +147,7 @@ type rlsInfo struct {
 	IP string
 }
 type process struct {
-	Project *project
+	project *project
 	ProjectConfig *projectConfig
 	Env string
 	Ghost bool
@@ -162,9 +174,29 @@ type logSection struct {
 	Success bool
 }
 
-type metricBucket struct {
-	TotalRequests int
-	Timestamp int64 //unix time minute
-	UniqueVisitors map[string]struct{}
-	Headers map[string]map[string]int //map: header : value : quantity
+type comData struct {
+	Payload any `json:"payload,omitempty"`
+	Type string `json:"type,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+type comRequest struct {
+	Action string `json:"action"`
+	Payload map[string]string `json:"payload"`
+	Key string `json:"key"`
+}
+
+type comRayInfo struct {
+	RayVer string `json:"version"`
+	ProtocolVersion string `json:"protocolVersion"`
+}
+
+type comKeyInfo struct {
+	Holder string `json:"holder"`
+	Permissions []string `json:"permissions"`
+}
+
+type comResponse struct {
+	Ray comRayInfo `json:"ray"`
+	Key *comKeyInfo `json:"key"`
+	Data comData `json:"response"`
 }

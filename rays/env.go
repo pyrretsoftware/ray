@@ -36,7 +36,7 @@ func trackProcess(cmd *exec.Cmd, process *process, buffer *strings.Builder) {
 
 func incorrectPortUsage(process *process, actualPort string) {
 	process.remove()
-	rlog.Notify(process.Project.Name + " was instructed to listen for connections on port " + strconv.Itoa(process.Port) + ", but instead started listenting on port " + actualPort + ", and was forcefully terminated.", "err")
+	rlog.Notify(process.project.Name + " was instructed to listen for connections on port " + strconv.Itoa(process.Port) + ", but instead started listenting on port " + actualPort + ", and was forcefully terminated.", "err")
 	rlog.Notify("Please make sure your application listens to connections according to the ray-port enviroument variable.", "err")
 }
 
@@ -151,7 +151,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	process.Hash = branchHash
 	process.Id = procId
 	process.RLSInfo.IP = RLSHost
-	process.Project = project
+	process.project = project
 	process.Env = envDir
 	process.Active = true
 	process.State = "OK"
@@ -333,7 +333,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 
 	var oldprocesses []*process
 	for _, prc := range processes {
-		if (prc.Project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
+		if (prc.project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
 			oldprocesses = append(oldprocesses, prc)
 		}
 	}
@@ -451,6 +451,7 @@ func SetupEnv() {
 		exiting = true
 		os.RemoveAll(rdata.RayEnv)
 		os.Remove(dotslash + "/clisocket.sock")
+		os.Remove(dotslash + "/comsock.sock")
 		os.Exit(0)
 	}()	
 

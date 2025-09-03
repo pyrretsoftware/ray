@@ -31,13 +31,20 @@ var errorCodes = map[string]string{
 	` connection refused`:            "ProcessOffline",
 }
 
-func intParse(val string) int64 {
-	n, err := strconv.ParseInt(val, 10, 0)
-	if err != nil {
-		return 0 //notice in case of a parse error a renrollment will always be trigged, which is probably a good thing since the cookie would have to be incorrectly formatted for us to get here
-	} else {
-		return n
+func parseEnrollmentCookie(cookie *http.Cookie, cerr error) bool {
+	if cerr != nil || cookie == nil || cookie.Valid() != nil {return false}
+
+	var enrollTime int64 = 0
+	n, perr := strconv.ParseInt(cookie.Value, 10, 0)
+	if perr == nil {
+		enrollTime = n //notice in case of a parse error a renrollment will always be trigged, which is probably a good thing since the cookie would have to be incorrectly formatted for us to get here
 	}
+
+	if perr == nil && enrollTime < rconf.ForcedRenrollment {
+		return true
+	}
+
+	return false
 }
 
 func startHttpServer(srv *http.Server) {
@@ -59,6 +66,7 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 	rerr.Notify("Failed listenting with https: ", err, true)
 }
 
+var internalRouteTable = map[string]string{} //host: destUrl
 func startProxy() {
 	srv := &http.Server{Handler: &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -105,14 +113,24 @@ func startProxy() {
 			var requestProject project
 			foundProcess := false
 			for _, process := range processes {
-				if process.Project.Domain == r.In.Host && !process.ProjectConfig.NotWebsite {
+				if process.project.Domain == r.In.Host && !process.ProjectConfig.NotWebsite {
 					foundProcess = true
-					requestProject = *process.Project //note here we are braking as soon as we find an process instance of that project, meaning we'll need to loop over the processes again later for finding the one with out specific channel
+					requestProject = *process.project 
+					
+					//note here we are braking as soon as we find an process instance
+					// of that project, meaning we'll need to loop over the processes again
+					// later for finding the one with our specific channel.
+					// This is quite shitty but we dont really have an alternative
+					// since we need to know the available channels of a project
+					// to find the channel we are looking for. Might want to change to
+					// looping over processes to projects.
 					break
 				}
 			}
 			if !foundProcess {
-				return
+				if _, ok := internalRouteTable[r.In.Host]; !ok {
+					return
+				}
 			}
 
 			//invoke plugin
@@ -123,22 +141,21 @@ func startProxy() {
 
 			//get channel
 			_ch, err := r.In.Cookie("ray-channel")
-			_enrolled, enerr := r.In.Cookie("ray-enrolled-at")
 
 			chnl := ""
 			requiresAuth := false
-			if err != nil || (enerr == nil && intParse(_enrolled.Value) < rconf.ForcedRenrollment) { //enroll new user
+			deployments := requestProject.Deployments
+			if err != nil || parseEnrollmentCookie(r.In.Cookie("ray-enrolled-at")) { //enroll new user
 				var rand = rand.Float64() * 100
-				dplymnt := requestProject.Deployments
 
-				for index, deployment := range dplymnt {
+				for index, deployment := range deployments {
 					if deployment.Type != "test" {
 						continue
 					}
 
 					var lastDeployment float64
 					if index != 0 {
-						lastDeployment = float64(dplymnt[index-1].Enrollment)
+						lastDeployment = float64(deployments[index-1].Enrollment)
 					} else {
 						lastDeployment = -1
 					}
@@ -155,9 +172,9 @@ func startProxy() {
 				ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
 				r.Out = r.Out.WithContext(ctx)
 			} else {
-				for _, dpl := range requestProject.Deployments {
-					if dpl.Branch == _ch.Value {
-						if dpl.Type == "dev" {
+				for _, deployment := range deployments {
+					if deployment.Branch == _ch.Value {
+						if deployment.Type == "dev" {
 							requiresAuth = true
 						}
 						chnl = _ch.Value
@@ -201,9 +218,23 @@ func startProxy() {
 			existsAsErrored := false
 			hostFound := false
 			tryRoute := func() {
+				//internal route table
+				if destUrl, ok := internalRouteTable[r.In.Host]; ok {
+					url, err := url.Parse(destUrl)
+					if err != nil {
+						return
+					}
+
+					transportContext := context.WithValue(r.Out.Context(), rayUnixSocketPath, "")
+					r.Out = r.Out.WithContext(transportContext)
+					r.SetURL(url)
+					return
+				}
+
+				//regular processes
 				var foundProcesses []process
 				for _, process := range processes { //see above for more info
-					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
+					if process.project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
 						if process.State == "drop" {
 							existsAsDropped = true
 							continue
@@ -216,10 +247,7 @@ func startProxy() {
 						foundProcesses = append(foundProcesses, *process)
 					}
 				}
-
-				if len(foundProcesses) == 0 {
-					return
-				}
+				if len(foundProcesses) == 0 {return}
 
 				var ipSum float64 = 0 //from 0 to 1020 (255 * 4)
 				for _, ipByte := range strings.Split(strings.Split(r.In.RemoteAddr, ":")[0], ".") {
@@ -251,12 +279,11 @@ func startProxy() {
 				}
 
 				//middleware over tcp
-				if requestProject.Middleware != "" {
+				if chosenServer.project.Middleware != "" {
 					r.Out.Header.Add("x-middleware-dest", destUrl)
-					destUrl = "http://" + requestProject.Middleware
+					destUrl = "http://" + chosenServer.project.Middleware
 				}
 				url, err := url.Parse(destUrl)
-
 				if err != nil {
 					return
 				}
@@ -394,4 +421,5 @@ func startProxy() {
 	} else {
 		rlog.Notify("Did not start https server, no provider configured.", "warn")
 	}
+	LoadLines(*rconf)
 }
