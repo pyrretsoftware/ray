@@ -6,16 +6,16 @@ import (
 	"path"
 )
 
-func applyChanges(_config rayconfig) error {
+func writeConf(_config rayconfig) error {
 	config, err := json.MarshalIndent(_config, "", "    ")
 	if err != nil {
 		rlog.Notify("Cant format config file: " + err.Error(), "err")
 		return err
 	}
-	return applyChangesRaw(config)
+	return writeConfRaw(config)
 }
 
-func applyChangesRaw(config []byte) error {
+func writeConfRaw(config []byte) error {
 	err := os.WriteFile(path.Join(dotslash, "rayconfig.json"), config, 0666)
 	if err != nil {
 		rlog.Notify("Cant apply config changes: " + err.Error(), "err")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"slices"
 )
 
@@ -18,7 +19,7 @@ func ComErrorString(err ComError) string {
 		return "the request payload does not match the expected format."
 	}
 
-	return ""
+	return string(err)
 }
 
 //com actions
@@ -65,6 +66,21 @@ func configRead(permissons []string) (rayconfig, ComError) {
 		return readConfig(), Success
 	}
 	return rayconfig{}, NotPermitted
+}
+func configWrite(permissons []string, ba []byte) (ComError) {
+	if permOk(permissons, "config:write", "config:all", "special:all") {
+		var _conf rayconfig
+		jerr := json.Unmarshal(ba, &_conf)
+		if jerr != nil {
+			return ComError("Invalid json, refusing to write config: " + jerr.Error())
+		}
+		err := writeConfRaw(ba)
+		if err != nil {
+			return ComError("Could not write config: " + err.Error())
+		}
+		return Success
+	}
+	return NotPermitted
 }
 
 func HandleRequest(r comRequest) comResponse {
@@ -124,6 +140,12 @@ func HandleRequest(r comRequest) comResponse {
 		pl, err := configReadRaw(comKey.Permissions)
 		response.Error = ComErrorString(err)
 		response.Payload = pl
+	case "config:write":
+		if pl["config"] == "" {
+			response.Error = ComErrorString(TypeError)
+		} else {
+			response.Error = ComErrorString(configWrite(comKey.Permissions, []byte(pl["config"])))
+		}
 	}
 
 	return comResponse{
