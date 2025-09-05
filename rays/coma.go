@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 )
 
 type ComError string
@@ -83,7 +84,7 @@ func configWrite(permissons []string, ba []byte) (ComError) {
 	return NotPermitted
 }
 
-func HandleRequest(r comRequest) comResponse {
+func HandleRequest(r comRequest, l ComLine) comResponse {
 	if r.Key == "" {
 		return comResponse{
 			Data: comData{
@@ -94,10 +95,39 @@ func HandleRequest(r comRequest) comResponse {
 
 	comKeyConf := Key{}
 	keyFound := false
-	for _, key := range rconf.Com.Keys {
-		if key.Type == "hardcode" && key.Key == r.Key {
-			comKeyConf = key
-			keyFound = true
+
+	if strings.HasPrefix(r.Key, "ext:") {
+		if !l.AllowExtensions() {
+			return comResponse{
+				Data: comData{
+					Error: "this comline does not accept extensions!",
+				},
+			}
+		}
+
+		sections := strings.Split(strings.TrimPrefix(r.Key, "ext:"), ";")
+		if len(sections) != 4 {
+			return comResponse{
+				Data: comData{
+					Error: "inproperly formatted extension declaration: should have 4 sections!",
+				},
+			}
+		}
+
+		keyFound = true
+		comKeyConf.DisplayName = sections[0]
+		comKeyConf.Permissons = []string{"special:ext"}
+		extensions[sections[0]] = Extension{
+			Description: sections[1],
+			URL: sections[2],
+			ImageBlob: sections[3],
+		}
+	} else {
+		for _, key := range rconf.Com.Keys {
+			if key.Type == "hardcode" && key.Key == r.Key {
+				comKeyConf = key
+				keyFound = true
+			}
 		}
 	}
 	if !keyFound {

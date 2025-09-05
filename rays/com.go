@@ -20,6 +20,8 @@ type ComLine interface {
 	Init() error
 	//Close closes the comline, this should return an error if the comline is not yet initalized
 	Close() error
+	//AllowExtensions returns a boolean representing whether or not the comline accepts extensions
+	AllowExtensions() bool
 }
 
 type ComLineReadResponse struct {
@@ -31,6 +33,7 @@ type ComLineReadResponse struct {
 type HTTPComLine struct {
 	Host string //Used by ray router
 	Type string //the underlying network to use: tcp or unix
+	ExtensionsEnabled bool //whether or not the comline accepts extensions
 	srv *http.Server
 	mainc chan ComLineReadResponse
 	close func() error
@@ -39,6 +42,14 @@ type HTTPComLine struct {
 func (c *HTTPComLine) Read() (receive io.Reader, respond io.WriteCloser, setCode func(code int)) {
 	resp := <- c.mainc
 	return resp.receive, resp.respond, resp.setCode
+}
+
+func (c *HTTPComLine) AllowExtensions() bool {
+	if c.Type == "unix" {
+		return c.ExtensionsEnabled
+	}
+	rlog.Notify("Extensions were allowed on a non-UDS comline, which is not allowed for security reasons.", "warn")
+	return false
 }
 
 func (c *HTTPComLine) Close() error {

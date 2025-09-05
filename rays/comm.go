@@ -8,6 +8,12 @@ import (
 //com manager
 
 var comLines []ComLine
+var extensions map[string]Extension
+type Extension struct {
+	Description string
+	URL string
+	ImageBlob string
+}
 
 func ReadFromLineLoop(l ComLine) {
 	for {
@@ -36,7 +42,7 @@ func ReadFromLine(l ComLine) {
 		return
 	}
 
-	fresp := HandleRequest(req)
+	fresp := HandleRequest(req, l)
 	if fresp.Data.Error != "" {
 		setCode(500)
 	}
