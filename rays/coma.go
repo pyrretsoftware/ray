@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"os/exec"
 	"slices"
 	"strings"
 	"time"
@@ -112,6 +113,31 @@ func channelAuth(permissons []string) (string, ComError) {
 	}
 	return "", NotPermitted
 }
+func rayReload(permissons []string) ComError {
+	if permOk(permissons, "ray:reload", "ray:all", "special:all", "special:ext") {
+		config := readConfig()
+		rconf = &config
+		
+		for _, project := range rconf.Projects {
+			startProject(&project, "")
+		}
+		return Success 
+	}
+	return NotPermitted
+}
+func rayUpdate(permissons []string) ComError {
+	if permOk(permissons, "ray:reload", "ray:all", "special:all", "special:ext") {
+		updateProjects(true)
+		return Success
+	}
+	return NotPermitted
+}
+func raySystemctlRestart(permissons []string) ComError {
+	if permOk(permissons, "ray:restart", "ray:all", "special:all", "special:ext") {
+		return ComError(exec.Command("systemctl", "restart", "rays.service").Run().Error())
+	}
+	return NotPermitted
+}
 
 
 func HandleRequest(r comRequest, l ComLine) comResponse {
@@ -219,7 +245,13 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		}
 	case "channel:auth":
 		pl, err := channelAuth(comKey.Permissions)
-		response.Error, response.Payload = ComErrorString(err), pl 
+		response.Error, response.Payload = ComErrorString(err), pl
+	case "ray:reload":
+		response.Error = ComErrorString(rayReload(comKey.Permissions))
+	case "ray:systemctl:restart":
+		response.Error = ComErrorString(raySystemctlRestart(comKey.Permissions))
+	case "ray:update":
+		response.Error = ComErrorString(rayUpdate(comKey.Permissions))
 	}
 
 	return comResponse{

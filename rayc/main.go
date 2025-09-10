@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/urfave/cli/v3"
@@ -11,8 +10,8 @@ import (
 
 var Version = "1.0.0"
 func about(context.Context, *cli.Command) error {
-	fmt.Println(greenBold.Render("rayc"), "is a cli-based ray comline client, it is the offical/recommended way to interact with comlines.\nIt can talk with comlines that use", greenBold.Render("UDS (Unix domain sockets)"), "and", greenBold.Render("HTTP") + ".")
-	fmt.Println("By default, rayc will attempt to connect to a local UDS comline on this machine. You can use the -r flag to specify a remote HTTP comline to use.")
+	fmt.Println(greenBold.Render("rayc"), "is a cli-based ray comline client, it is the offical/recommended way to manage ray servers with comlines.\nIt can talk with comlines that use", greenBold.Render("UDS (Unix domain sockets)"), "and", greenBold.Render("HTTP") + ".")
+	fmt.Println("By default, rayc will attempt to connect to a local UDS comline on this machine. You can use the", greenBold.Render("-r flag"), "to specify a remote HTTP comline to use.")
 	fmt.Println()
 	fmt.Println("Running rayc version", greenBold.Render(Version))
 	return nil
@@ -69,19 +68,34 @@ func main() {
 			},
 			{
 				Name: "auth",
-				Usage: "generates an authentication token for accessing dev channels ",
+				Usage: "generates an authentication token for accessing dev channels",
 				Action: auth,
 			},
 			{
 				Name: "reload",
 				Usage: "reads and updates the server to changes in the config file, including restarting all processes.",
-				Description: "",
-				Action: auth,
+				Action: reload,
+			},
+			{
+				Name: "update",
+				Usage: "manually checks for updates on all projects, and updates those that are out dated.",
+				Description: "This is automatically done every minute, though using this command also updates rolled-backed processes.",
+				Action: update,
+			},
+			{
+				Name: "systemctl-restart",
+				Aliases: []string{"sctl-restart"},
+				Usage: "restarts ray server with systemctl restart, this only works on linux with systemctl",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name: "fr",
+						Usage: "run the command fr fr",
+					},
+				},
+				Action: restart,
 			},
 		},
 	}
 
-	if err := cli.Run(context.Background(), os.Args); err != nil {
-        log.Fatal(err)
-    }
+	cli.Run(context.Background(), os.Args);
 }

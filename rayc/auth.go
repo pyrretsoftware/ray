@@ -19,6 +19,6 @@ func auth(cc context.Context, cmd *cli.Command) error {
 		fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
 	}
 
-	fmt.Println("Use the key", blueBold.Render(key) + "to log into development channels.")
+	fmt.Println("Use the key", blueBold.Render(key), "to log into development channels.")
 	return err
 }

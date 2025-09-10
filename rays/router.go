@@ -260,7 +260,7 @@ func startProxy() {
 				}
 
 				weightArray := getRlsWeightArray(foundProcesses)
-				index := int(math.Floor(ipSum * float64(len(weightArray)) / 1020))
+				index := int(math.Floor(ipSum * float64(len(weightArray)) / 1020)) //the ip sum can be 0-1020
 				chosenServer := weightArray[index]
 
 				//default: local server over tcp
