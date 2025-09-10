@@ -13,14 +13,15 @@ type deployment struct {
 type project struct {
 	Src string
 	Name string
-	EnvVars map[string]string
+	EnvVars map[string]string `json:"EnvVars,omitempty"`
 	Domain string
-	Deployments []deployment
-	ProdTypeIsDev bool
-	PluginImplementation string
-	Options map[string]string
-	DeployOn []string
-	Middleware string
+	Deployments []deployment `json:"Deployments,omitempty"`
+	ProdTypeIsDev bool `json:"ProdTypeIsDev,omitempty"`
+	PluginImplementation string `json:"PluginImplementation,omitempty"`
+	Options map[string]string `json:"Options,omitempty"`
+	DeployOn []string 
+	Middleware string `json:"Middleware,omitempty"`
+	ForcedRenrollment int64 
 }
 
 type auth struct {
@@ -33,12 +34,12 @@ type raydata struct {
 }
 
 type tlsConfig struct {
-	Provider string //enum, possile vals are "letsencrypt" and "custom". 
+	Provider string `json:"Provider,omitempty"` //enum, possile vals are "letsencrypt" and "custom". 
 }
 
 type gitAuth struct {
-	Username string
-	Password string
+	Username string `json:"Username,omitempty"`
+	Password string `json:"Password,omitempty"`
 }
 
 type RLSipPair struct {
@@ -62,46 +63,45 @@ type rlsConnection struct {
 	RLSPGetResponse *func(id string) []byte
 }
 type helperServer struct {
-	Host string
-	Name string
-	Weight float64
+	Host string `json:"Host,omitempty"`
+	Name string `json:"Name,omitempty"`
+	Weight float64 `json:"Weight,omitempty"`
 }
 type rlsConfig struct {
-	Helpers []helperServer
-	Enabled bool
+	Helpers []helperServer `json:"Helpers,omitempty"`
+	Enabled bool `json:"Enabled,omitempty"`
 }
 
 type webhook struct {
-	Type string //enum, either "discord", "slack" or "generic"
-	Url string
+	Type string `json:"Type,omitempty"` //enum, either "discord", "slack" or "generic"
+	Url string `json:"Url,omitempty"`
 }
 type monitoringConfig struct {
-	Webhooks []webhook
-	TriggerOn []string //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
+	Webhooks []webhook `json:"Webhooks,omitempty"`
+	TriggerOn []string `json:"TriggerOn,omitempty"` //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
 }
 
 type Key struct {
-	Type string //for later features, always set to 'hardcode' for now
-	Key string //the actual key, if type is hardcode
-	Permissons []string //a list of permissons to give. The key defaults to no permissons.
-	DisplayName string //a display name for the key, like who or what uses it. 
+	Type string `json:"Type,omitempty"` //for later features, always set to 'hardcode' for now
+	Key string `json:"Key,omitempty"` //the actual key, if type is hardcode
+	Permissons []string `json:"Permissons,omitempty"` //a list of permissons to give. The key defaults to no permissons.
+	DisplayName string `json:"DisplayName,omitempty"` //a display name for the key, like who or what uses it. 
 }
 type ComConfig struct {
-	Lines []HTTPComLine
-	Keys []Key
+	Lines []HTTPComLine `json:"Lines,omitempty"`
+	Keys []Key `json:"Keys,omitempty"`
 }
 
 type rayconfig struct {
-	Projects []project
-	ForcedRenrollment int64
-	TLS tlsConfig
-	EnableRayUtil bool
-	GitAuth gitAuth
-	RLSConfig rlsConfig
-	AutofixDisabled bool
-	Monitoring monitoringConfig
-	Com ComConfig
-	//MetricsEnabled bool //maybe
+    Projects []project `json:"Projects,omitempty"`
+    TLS tlsConfig `json:"TLS,omitempty"`
+    EnableRayUtil bool `json:"EnableRayUtil,omitempty"`
+    GitAuth gitAuth `json:"GitAuth,omitempty"`
+    RLSConfig rlsConfig `json:"RLSConfig,omitempty"`
+    AutofixDisabled bool `json:"AutofixDisabled,omitempty"`
+    Monitoring monitoringConfig `json:"Monitoring,omitempty"`
+    Com ComConfig `json:"Com,omitempty"`
+    //MetricsEnabled bool //maybe
 }
 
 type rayserveRedirect struct {

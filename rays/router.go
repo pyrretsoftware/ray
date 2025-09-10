@@ -31,7 +31,7 @@ var errorCodes = map[string]string{
 	` connection refused`:            "ProcessOffline",
 }
 
-func parseEnrollmentCookie(cookie *http.Cookie, cerr error) bool {
+func parseEnrollmentCookie(forcedRenrollment int64, cookie *http.Cookie, cerr error) bool {
 	if cerr != nil || cookie == nil || cookie.Valid() != nil {return false}
 
 	var enrollTime int64 = 0
@@ -40,7 +40,7 @@ func parseEnrollmentCookie(cookie *http.Cookie, cerr error) bool {
 		enrollTime = n //notice in case of a parse error a renrollment will always be trigged, which is probably a good thing since the cookie would have to be incorrectly formatted for us to get here
 	}
 
-	if perr == nil && enrollTime < rconf.ForcedRenrollment {
+	if perr == nil && enrollTime < forcedRenrollment {
 		return true
 	}
 
@@ -145,7 +145,8 @@ func startProxy() {
 			chnl := ""
 			requiresAuth := false
 			deployments := requestProject.Deployments
-			if err != nil || parseEnrollmentCookie(r.In.Cookie("ray-enrolled-at")) { //enroll new user
+			_cookie, _cookieerr := r.In.Cookie("ray-enrolled-at")
+			if err != nil || parseEnrollmentCookie(requestProject.ForcedRenrollment, _cookie, _cookieerr) { //enroll new user
 				var rand = rand.Float64() * 100
 
 				for index, deployment := range deployments {

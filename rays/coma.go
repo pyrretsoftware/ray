@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"slices"
 	"strings"
+	"time"
 )
 
 type ComError string
@@ -57,13 +59,13 @@ func routerDeregister(route string, permissons []string) ComError {
 	return Success
 }
 func configReadRaw(permissons []string) ([]byte, ComError) {
-	if permOk(permissons, "config:read", "config:all", "special:all") {
+	if permOk(permissons, "config:read", "config:all", "special:all", "special:ext") {
 		return readConfigRaw(), Success
 	}
 	return nil, NotPermitted
 }
 func configRead(permissons []string) (rayconfig, ComError) {
-	if permOk(permissons, "config:read", "config:all", "special:all") {
+	if permOk(permissons, "config:read", "config:all", "special:all", "special:ext") {
 		return readConfig(), Success
 	}
 	return rayconfig{}, NotPermitted
@@ -83,6 +85,34 @@ func configWrite(permissons []string, ba []byte) (ComError) {
 	}
 	return NotPermitted
 }
+func channelForceRenrollment(permissons []string, projectName string) ComError {
+	if permOk(permissons, "channels:reenroll", "channels:all", "special:all", "special:ext") {
+		//this is more like a config change
+		newProj := []project{}
+		for _, proj := range rconf.Projects {
+			if proj.Name == projectName {
+				proj.ForcedRenrollment = time.Now().Unix()
+			}
+			newProj = append(newProj, proj)
+		}
+		rconf.Projects = newProj
+		err := writeConf(*rconf)
+		if err != nil {
+			return ComError(err.Error())
+		}
+
+		return Success
+	}
+	return NotPermitted
+}
+func channelAuth(permissons []string) (string, ComError) {
+	if permOk(permissons, "channels:auth", "channels:all", "special:all", "special:ext") {
+		generateAuth()
+		return devAuth.Token, Success
+	}
+	return "", NotPermitted
+}
+
 
 func HandleRequest(r comRequest, l ComLine) comResponse {
 	if r.Key == "" {
@@ -143,7 +173,7 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 	}
 
 	response := comData{}
-	pl := r.Payload
+	rpl := r.Payload
 
 	switch r.Action{
 	case "process:read":
@@ -151,16 +181,16 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		response.Error = ComErrorString(err)
 		response.Payload = pl
 	case "router:register":
-		if pl["route"] == "" || pl["dest"] == "" {
+		if rpl["route"] == "" || rpl["dest"] == "" {
 			response.Error = ComErrorString(TypeError)
 		} else {
-			response.Error = ComErrorString(routerRegister(pl["route"], pl["dest"], comKey.Permissions))
+			response.Error = ComErrorString(routerRegister(rpl["route"], rpl["dest"], comKey.Permissions))
 		}
 	case "router:deregister":
-		if pl["route"] == "" || pl["dest"] == "" {
+		if rpl["route"] == "" || rpl["dest"] == "" {
 			response.Error = ComErrorString(TypeError)
 		} else {
-			response.Error = ComErrorString(routerDeregister(pl["route"], comKey.Permissions))
+			response.Error = ComErrorString(routerDeregister(rpl["route"], comKey.Permissions))
 		}
 	case "config:read":
 		pl, err := configRead(comKey.Permissions)
@@ -171,11 +201,25 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		response.Error = ComErrorString(err)
 		response.Payload = pl
 	case "config:write":
-		if pl["config"] == "" {
+		if rpl["config"] == "" {
 			response.Error = ComErrorString(TypeError)
 		} else {
-			response.Error = ComErrorString(configWrite(comKey.Permissions, []byte(pl["config"])))
+			conf, err := base64.StdEncoding.DecodeString(rpl["config"])
+			if err != nil {
+				response.Error = err.Error()
+				break
+			}
+			response.Error = ComErrorString(configWrite(comKey.Permissions, conf))
 		}
+	case "channel:renroll":
+		if rpl["project"] == "" {
+			response.Error = ComErrorString(TypeError)
+		} else {
+			response.Error = ComErrorString(channelForceRenrollment(comKey.Permissions, rpl["project"]))
+		}
+	case "channel:auth":
+		pl, err := channelAuth(comKey.Permissions)
+		response.Error, response.Payload = ComErrorString(err), pl 
 	}
 
 	return comResponse{

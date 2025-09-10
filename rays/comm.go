@@ -56,7 +56,11 @@ func LoadLines(c rayconfig) {
 	}
 
 	newComLines := []ComLine{}
-	for _, cl := range c.Com.Lines {		
+	lines := append(c.Com.Lines, HTTPComLine{
+		Host: "./comsock.sock",
+		Type: "unix",
+	})
+	for _, cl := range lines {		
 		if cl.Init() != nil {
 			rlog.Notify("could not init comline: ", "err")
 			continue
@@ -65,9 +69,5 @@ func LoadLines(c rayconfig) {
 		newComLines = append(newComLines, clptr)
 		go ReadFromLineLoop(clptr)
 	}
-	newComLines = append(newComLines, &HTTPComLine{
-		Host: "./comsock.sock",
-		Type: "unix",
-	})
 	comLines = newComLines
 }

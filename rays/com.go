@@ -78,12 +78,12 @@ func (c *HTTPComLine) Init() error {
 
 		rw.YieldClose()
 	})
-	port := strconv.Itoa(pickPort())
-	c.srv = &http.Server{Addr: ":" + port, Handler: handler}
+	c.srv = &http.Server{Addr: ":", Handler: handler}
 	host := filepath.Join(dotslash, c.Host) //only for unix sockets, changed by implementation
 
 	switch c.Type {
 	case "tcp", "tcp4", "tcp6":
+		port := strconv.Itoa(pickPort())
 		internalRouteTable[c.Host] = "http://127.0.0.1:" + port
 		host = ":" + port
 	case "unix":
