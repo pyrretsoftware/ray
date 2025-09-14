@@ -120,7 +120,7 @@ func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) 
 				rlog.Notify("Failed marshaling json.", "err")
 				return
 			}
-			latestWorkingCommit[process.project.Name] = process.Hash
+			latestWorkingCommit[process.Project.Name] = process.Hash
 			sendRlspRequest(string(ba), rlsConn)
 		}
 		process.RLSInfo.Type = "outsourced"

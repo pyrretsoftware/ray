@@ -36,18 +36,20 @@ func trackProcess(cmd *exec.Cmd, process *process, buffer *strings.Builder) {
 
 func incorrectPortUsage(process *process, actualPort string) {
 	process.remove()
-	rlog.Notify(process.project.Name + " was instructed to listen for connections on port " + strconv.Itoa(process.Port) + ", but instead started listenting on port " + actualPort + ", and was forcefully terminated.", "err")
+	rlog.Notify(process.Project.Name + " was instructed to listen for connections on port " + strconv.Itoa(process.Port) + ", but instead started listenting on port " + actualPort + ", and was forcefully terminated.", "err")
 	rlog.Notify("Please make sure your application listens to connections according to the ray-port enviroument variable.", "err")
 }
 
 //this method also handles when the process uses a UDS socket
-func waitForProcessListen(process *process, udspath string) {
+func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 	waited := 0
-	var ports []string
-	for (len(ports) == 0 && waited < 100) {
+	occupied := false
+	ports := []string{}
+	for len(ports) == 0 && !occupied && waited < 100 {
 		time.Sleep(500 * time.Millisecond)
 		waited += 1
 		ports = getProcessPorts(process.Processes[0])
+		occupied = portUsed(process.Port)
 		
 		if _, err := os.Stat(udspath); err == nil {
 			process.UnixSocketPath = udspath
@@ -56,9 +58,19 @@ func waitForProcessListen(process *process, udspath string) {
 		}
 	}
 
-	if (len(ports) == 0) {
+	if len(ports) == 0 && !occupied {
 		rlog.Notify("The application has not yet started listening for connections on any port, even after waiting 50 seconds, Terminating...", "warn")
 		process.remove()
+		return
+	} else if len(ports) == 0 {
+		//TODO: test this
+		rlog.Notify("The instructed port is occupied, but not by the same process as the deploy step. This can happen if the deploy step spawns new processes.", "warn")
+		if lenientPorts {
+			rlog.Notify("Since lenient ports are enabled, this will not be conisdered a problem.", "warn")
+		} else {
+			rlog.Notify("Since lenient ports are disabled, ray will treat this as an error and terminate the application...", "warn")
+			process.remove()
+		}
 		return
 	}
 
@@ -151,7 +163,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	process.Hash = branchHash
 	process.Id = procId
 	process.RLSInfo.IP = RLSHost
-	process.project = project
+	process.Project = project
 	process.Env = envDir
 	process.Active = true
 	process.State = "OK"
@@ -267,6 +279,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			(*swapfunction)()
 		}
 
+		//TODO: write to a file for deploy steps, keeping everything the program logs in a buffer in memory is a terrible idea.
 		cmd.Stdout = &logBuffer
 		cmd.Stderr = &logBuffer
 
@@ -278,7 +291,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, commandError == nil)
 		} else if commandError == nil {
 			time.Sleep(2000 * time.Millisecond)
-			go func () { //if the deploy process exits within 2100ms so we can check for it later, otherwise this goroutinue will keep running and doing nothing
+			go func () { //if the deploy process exits within 2100ms so we can check for it later, otherwise this goroutinue will keep running and doing nothing (really hacky)
 				cmd.Wait()
 				deployProcessExited = true
 			}()
@@ -317,7 +330,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 				go trackProcess(cmd, &process, &logBuffer)
 
 				if (config.NotWebsite) {break}
-				go waitForProcessListen(&process, udspath)
+				go waitForProcessListen(&process, udspath, process.ProjectConfig.LenientPorts)
 
 				break
 			}
@@ -333,7 +346,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 
 	var oldprocesses []*process
 	for _, prc := range processes {
-		if (prc.project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
+		if (prc.Project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
 			oldprocesses = append(oldprocesses, prc)
 		}
 	}

@@ -131,8 +131,9 @@ type pipelineStep struct {
 
 type projectConfig struct {
 	Version string
-	Pipeline []pipelineStep
+	LenientPorts bool
 	NotWebsite bool
+	Pipeline []pipelineStep
 }
 
 type statusItem struct {
@@ -153,7 +154,7 @@ type rlsInfo struct {
 	IP string
 }
 type process struct {
-	project *project
+	Project *project
 	ProjectConfig *projectConfig
 	Env string
 	Ghost bool

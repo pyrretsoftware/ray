@@ -79,10 +79,10 @@ func getLocalComlineAddress() (string, error) {
 }
 
 func makeRequest(rFlag string, req comRequest) (error, comResponse) {
-	localAddress, err := getLocalComlineAddress()
+	_, err := getLocalComlineAddress()
 	if err != nil {return err, comResponse{}}
 	
-	c := getClient(rFlag, localAddress) //"../rays/ray-env/comsock.sock"
+	c := getClient(rFlag, "../rays/ray-env/comsock.sock") //"../rays/ray-env/comsock.sock"
 	if rFlag == "" {
 		rFlag = "http://how-can-you-see-this"
 		if req.Key == "" {

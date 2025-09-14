@@ -113,9 +113,9 @@ func startProxy() {
 			var requestProject project
 			foundProcess := false
 			for _, process := range processes {
-				if process.project.Domain == r.In.Host && !process.ProjectConfig.NotWebsite {
+				if process.Project.Domain == r.In.Host && !process.ProjectConfig.NotWebsite {
 					foundProcess = true
-					requestProject = *process.project 
+					requestProject = *process.Project 
 					
 					//note here we are braking as soon as we find an process instance
 					// of that project, meaning we'll need to loop over the processes again
@@ -235,7 +235,7 @@ func startProxy() {
 				//regular processes
 				var foundProcesses []process
 				for _, process := range processes { //see above for more info
-					if process.project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
+					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
 						if process.State == "drop" {
 							existsAsDropped = true
 							continue
@@ -280,9 +280,9 @@ func startProxy() {
 				}
 
 				//middleware over tcp
-				if chosenServer.project.Middleware != "" {
+				if chosenServer.Project.Middleware != "" {
 					r.Out.Header.Add("x-middleware-dest", destUrl)
-					destUrl = "http://" + chosenServer.project.Middleware
+					destUrl = "http://" + chosenServer.Project.Middleware
 				}
 				url, err := url.Parse(destUrl)
 				if err != nil {

@@ -94,6 +94,24 @@ func main() {
 				},
 				Action: restart,
 			},
+			{
+				Name: "extensions",
+				Aliases: []string{"ext"},
+				Usage: "lists all active extensions",
+				Action: extensions,
+			},
+			{
+				Name: "list",
+				Usage: "lists all processes",
+				Action: list,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name: "ghost",
+						Aliases: []string{"gh"},
+						Usage: "also show ghost processes",
+					},
+				},
+			},
 		},
 	}
 

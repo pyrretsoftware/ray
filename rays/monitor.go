@@ -34,7 +34,7 @@ var messageFuncs = map[string]func(params any) string{
 		prc, ok := params.(process)
 		if !ok {return "rayMonitoringError"}
 
-		return "❌ Process **" + prc.project.Name + "**, deployment **" + prc.Branch + "** has errored! Reported exit reason/message: ```" + strings.ReplaceAll(strings.ReplaceAll(prc.State, "\n", "\\n"), "\r", "") + "```"
+		return "❌ Process **" + prc.Project.Name + "**, deployment **" + prc.Branch + "** has errored! Reported exit reason/message: ```" + strings.ReplaceAll(strings.ReplaceAll(prc.State, "\n", "\\n"), "\r", "") + "```"
 	},
 	"projectNoRlsError" : func(params any) string {
 		prj, ok := params.(project)
@@ -64,7 +64,7 @@ var messageFuncs = map[string]func(params any) string{
 		prc, ok := params.(process)
 		if !ok {return "rayMonitoringError"}
 		
-		return "🖥️ New process **" + prc.project.Name + "** (deployment **" + prc.Branch +"**) was just started on **" + prc.RLSInfo.IP +"**!" 
+		return "🖥️ New process **" + prc.Project.Name + "** (deployment **" + prc.Branch +"**) was just started on **" + prc.RLSInfo.IP +"**!" 
 	},
 	"raysExit" : func(params any) string {
 		exrs, ok := params.(string)
