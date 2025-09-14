@@ -12,7 +12,7 @@ var DebugLogsEnabled bool
 func main() {
 	assignDotSlash()
 	if (!checkPerms()) {
-		rlog.Fatal("To use the ray CLI or to launch rays you need to run as root or using sudo")
+		rlog.Fatal("To launch rays you need to run as root or using sudo")
 	}
 	if (len(os.Args) == 1) {
 		rlog.Fatal("No arguments passed!")
@@ -36,5 +36,9 @@ func main() {
 		SetupEnv()
 		startProxy()
 		select {}
+	} else if os.Args[1] == "reload" {
+		rayReload([]string{"special:all"})
+	} else if os.Args[1] == "exit" {
+		cleanUpAndExit()
 	}
 }

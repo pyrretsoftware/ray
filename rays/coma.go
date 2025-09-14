@@ -138,7 +138,12 @@ func raySystemctlRestart(permissons []string) ComError {
 	}
 	return NotPermitted
 }
-
+func extensionsRead(permissons []string) (map[string]Extension, ComError) {
+	if permOk(permissons, "extensions:read", "extensions:all", "special:all", "special:ext") {
+		return extensions, ""
+	}
+	return map[string]Extension{}, NotPermitted
+}
 
 func HandleRequest(r comRequest, l ComLine) comResponse {
 	if r.Key == "" {
@@ -162,12 +167,15 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		}
 
 		sections := strings.Split(strings.TrimPrefix(r.Key, "ext:"), ";")
-		if len(sections) != 4 {
+		img := ""
+		if len(sections) != 4 && len(sections) != 3 {
 			return comResponse{
 				Data: comData{
-					Error: "inproperly formatted extension declaration: should have 4 sections!",
+					Error: "inproperly formatted extension declaration: should have 3 or 4 sections!",
 				},
 			}
+		} else if len(sections) == 4 {
+			img = sections[3] 
 		}
 
 		keyFound = true
@@ -176,7 +184,7 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		extensions[sections[0]] = Extension{
 			Description: sections[1],
 			URL: sections[2],
-			ImageBlob: sections[3],
+			ImageBlob: img,
 		}
 	} else {
 		for _, key := range rconf.Com.Keys {
@@ -252,6 +260,9 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		response.Error = ComErrorString(raySystemctlRestart(comKey.Permissions))
 	case "ray:update":
 		response.Error = ComErrorString(rayUpdate(comKey.Permissions))
+	case "extensions:read":
+		pl, err := extensionsRead(comKey.Permissions)
+		response.Error, response.Payload = ComErrorString(err), pl
 	}
 
 	return comResponse{

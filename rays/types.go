@@ -47,6 +47,12 @@ type RLSipPair struct {
 	Private net.IP
 }
 
+type Extension struct {
+	Description string
+	URL string
+	ImageBlob string
+}
+
 type RLSPRequest struct {
 	Action string
 	Project project //only used when action is "startProject"

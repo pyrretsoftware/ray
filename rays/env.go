@@ -430,6 +430,15 @@ func startProject(project *project, hardCommit string) {
 	}
 }
 
+func cleanUpAndExit() {
+	rlog.Println("Cleaning up enviroument.")
+	exiting = true
+	os.RemoveAll(rdata.RayEnv)
+	os.Remove(dotslash + "/clisocket.sock")
+	os.Remove(dotslash + "/comsock.sock")
+	os.Exit(0)
+}
+
 var rconf *rayconfig
 var rdata raydata
 func SetupEnv() {
@@ -446,13 +455,7 @@ func SetupEnv() {
 		chnl := make(chan os.Signal)
 		signal.Notify(chnl, os.Interrupt)
 		<- chnl
-
-		rlog.Println("Cleaning up enviroument.")
-		exiting = true
-		os.RemoveAll(rdata.RayEnv)
-		os.Remove(dotslash + "/clisocket.sock")
-		os.Remove(dotslash + "/comsock.sock")
-		os.Exit(0)
+		cleanUpAndExit()
 	}()	
 
 	for _, project := range rconf.Projects {

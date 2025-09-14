@@ -8,12 +8,7 @@ import (
 //com manager
 
 var comLines []ComLine
-var extensions map[string]Extension
-type Extension struct {
-	Description string
-	URL string
-	ImageBlob string
-}
+var extensions = map[string]Extension{}
 
 func ReadFromLineLoop(l ComLine) {
 	for {
@@ -59,6 +54,7 @@ func LoadLines(c rayconfig) {
 	lines := append(c.Com.Lines, HTTPComLine{
 		Host: "./comsock.sock",
 		Type: "unix",
+		ExtensionsEnabled: true,
 	})
 	for _, cl := range lines {		
 		if cl.Init() != nil {
