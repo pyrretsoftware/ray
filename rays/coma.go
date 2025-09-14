@@ -260,6 +260,12 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		response.Error = ComErrorString(raySystemctlRestart(comKey.Permissions))
 	case "ray:update":
 		response.Error = ComErrorString(rayUpdate(comKey.Permissions))
+	case "ray:shutdown":
+		if permOk(comKey.Permissions, "ray:shutdown", "ray:all", "special:all", "special:ext") {
+			cleanUpAndExit()
+		} else {
+			response.Error = ComErrorString(NotPermitted)
+		}
 	case "extensions:read":
 		pl, err := extensionsRead(comKey.Permissions)
 		response.Error, response.Payload = ComErrorString(err), pl

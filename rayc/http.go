@@ -10,6 +10,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 )
 
 func getClient(rFlag string, unixAddr string) *http.Client {
@@ -60,10 +62,32 @@ type comResponse struct {
 	Data comData `json:"response"`
 }
 
+func getLocalComlineAddress() (string, error) {
+	address := ""
+	switch runtime.GOOS {
+	case "windows":
+		dir, err := os.UserHomeDir()
+		if err != nil {return "", err}
+
+		address = filepath.Join(dir, "ray-env", "comsock.sock")
+	case "linux":
+		address = "/usr/bin/ray-env/comsock.sock"
+	default:
+		return "", errors.New("unsupported platform, linux and windows are supported")
+	}
+	return address, nil
+}
+
 func makeRequest(rFlag string, req comRequest) (error, comResponse) {
-	c := getClient(rFlag, "../rays/ray-env/comsock.sock")
+	localAddress, err := getLocalComlineAddress()
+	if err != nil {return err, comResponse{}}
+	
+	c := getClient(rFlag, localAddress) //"../rays/ray-env/comsock.sock"
 	if rFlag == "" {
 		rFlag = "http://how-can-you-see-this"
+		if req.Key == "" {
+			req.Key = "ext:Rayc;This extension is used by rayc for local communications;https://pkgs.pyrret.com/rayc"
+		}
 	}
 
 	ba, err := json.Marshal(req)

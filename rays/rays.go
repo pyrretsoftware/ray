@@ -1,8 +1,9 @@
 package main
 
 import (
-	"os"
 	_ "embed"
+	"os"
+
 )
 
 //go:embed version
@@ -37,8 +38,14 @@ func main() {
 		startProxy()
 		select {}
 	} else if os.Args[1] == "reload" {
-		rayReload([]string{"special:all"})
+		SendComlineRequest(LocalComline, RawComRequest{
+			Action: "ray:reload",
+			Key: "ext:Systemd;This extension is used by systemd to manage the local ray server;https://systemd.io/",
+		})
 	} else if os.Args[1] == "exit" {
-		cleanUpAndExit()
+		SendComlineRequest(LocalComline, RawComRequest{
+			Action: "ray:shutdown",
+			Key: "ext:Systemd;This extension is used by systemd to manage the local ray server;https://systemd.io/",
+		})
 	}
 }
