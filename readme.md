@@ -12,7 +12,7 @@
     <span> | </span>
     <a href="https://github.com/pyrretsoftware/ray/releases">Latest release</a>
     <span> | </span>
-    <a href="https://github.com/pyrretsoftware/ray/actions">Latest unstable builds</a>
+    <a href="https://github.com/pyrretsoftware/ray/actions/workflows/package.yml">Latest unstable builds</a>
 </p>
 
 # what is ray? 
