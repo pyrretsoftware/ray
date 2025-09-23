@@ -13,27 +13,15 @@ import (
 
 func attachRlspListener(rlsConn *rlsConnection) {
 	conn := *rlsConn.Connection
-	var receivedResponses map[string]string = map[string]string{}
-
-	//TODO: use go channels instead of this piece of shit
-	grfunc := func(id string) []byte {
-		for {
-			if resp, ok := receivedResponses[id]; ok {
-				delete(receivedResponses, id)
-				return []byte(resp)
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
-	rlsConn.RLSPGetResponse = &grfunc
 
 	go func() {
 		for {
 			rdr := bufio.NewReader(conn)
 			rString, err := rdr.ReadString('\n')
 			if err != nil {
-				rlog.Notify("Error reading from RLS Channel", "err")
+				rlog.Notify("Error reading from RLS Channel: " + err.Error(), "err")
 				rlsConn.Connection = nil
+				rlsConn.ResponseChannels = map[string]chan []byte{}
 				go triggerEvent("rlsConnectionLost", *rlsConn)
 				rlog.Println("Attempting to reconnect...")
 
@@ -60,7 +48,10 @@ func attachRlspListener(rlsConn *rlsConnection) {
 
 			colonSplit := strings.Split(header, ":")
 			if colonSplit[0] == "response" {
-				receivedResponses[colonSplit[1]] = body
+				respChan, respChanOk := rlsConn.ResponseChannels[colonSplit[1]]
+				if respChanOk {
+					respChan <- []byte(body)
+				}
 			} else if colonSplit[0] == "request" {
 				var req RLSPRequest
 
@@ -241,9 +232,14 @@ func broadcastProcessReportsLoop() { //run as new goroutine/async
 func sendRlspRequest(body string, goal rlsConnection) []byte {
 	conn := *goal.Connection
 	reqId := getUuid()
+	rchan := make(chan []byte)
+	goal.ResponseChannels[reqId] = rchan
 
 	conn.Write([]byte("request:" + reqId + "|" + body + "\n"))
-	return (*goal.RLSPGetResponse)(reqId)
+	response := <- rchan
+	delete(goal.ResponseChannels, reqId)
+
+	return response
 }
 
 func sendRlspResponse(body string, goal rlsConnection, reqId string) {

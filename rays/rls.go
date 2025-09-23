@@ -208,6 +208,7 @@ func initRLS() {
 		rlog.Println("Connecting to helper server " + helperServer.Name)
 		var rlsConn rlsConnection
 		rlsConn.Name = helperServer.Name
+		rlsConn.ResponseChannels = map[string]chan []byte{}
 
 		ips, err := net.LookupIP(helperServer.Host)
 		if err != nil {
@@ -232,8 +233,10 @@ func initRLS() {
 
 		if addUpIp(localIp) > addUpIp(rlsConn.IP) { //bigger one gets to be server
 			rlsConn.Role = "client"
+			rlog.Debug("Helper server " + helperServer.Name + " has rls role client")
 		} else {
 			rlsConn.Role = "server"
+			rlog.Debug("Helper server " + helperServer.Name + " has rls role server")
 		}
 
 		rlsConnections = append(rlsConnections, rlsConn)

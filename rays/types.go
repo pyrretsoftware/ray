@@ -2,12 +2,13 @@ package main
 
 import (
 	"net"
+	"time"
 )
 
 type deployment struct {
 	Branch string
 	Type string
-	Enrollment int
+	Enrollment float64
 }
 
 type project struct {
@@ -26,7 +27,7 @@ type project struct {
 
 type auth struct {
 	Token string
-	Valid bool
+	ValidUntil time.Time
 }
 
 type raydata struct {
@@ -61,12 +62,16 @@ type RLSPRequest struct {
 	Processes []process
 }
 
+type rlsResponse struct {
+	Data []byte
+	Id string
+}
 type rlsConnection struct {
 	IP net.IP
 	Role string //enum, either client or server
 	Connection *net.Conn
 	Name string
-	RLSPGetResponse *func(id string) []byte
+	ResponseChannels map[string]chan[]byte
 }
 type helperServer struct {
 	Host string `json:"Host,omitempty"`

@@ -72,13 +72,14 @@ func pickPort() int {
 }
 
 func portUsed(port int) bool {
-	ln, err := net.Listen("tcp", ":" + strconv.Itoa(port))
+	conn, err := net.Dial("tcp", ":" + strconv.Itoa(port))
+
 	if err != nil {
-		return true
+		return false
 	}
   
-	ln.Close()
-	return false
+	conn.Close()
+	return true
 }
 var dotslash string = ""
 func assignDotSlash() {

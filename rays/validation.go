@@ -45,7 +45,7 @@ func validateHelperServers(servers []helperServer) {
 }
 
 func validateDeployments(deployments []deployment) {
-	var enrollments = 0
+	enrollments := float64(0)
 	for _, deployment := range deployments {
 		if deployment.Type == "" {
 			rlog.Fatal("Fatal rayconfig error: one of the specified deployments have no type specified.")

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"html"
 	"io"
 	"math"
 	"math/rand/v2"
@@ -53,7 +54,6 @@ func startHttpServer(srv *http.Server) {
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
-	rlog.Notify("TLS is currently untested and is not guaranteed to work", "warn")
 	certFile := dotslash + "/ray-certs/server.crt"
 	keyFile := dotslash + "/ray-certs/server.key"
 	if rconf.TLS.Provider == "letsencrypt" {
@@ -72,9 +72,9 @@ func startProxy() {
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.Out.Header.Add("Via", r.In.Proto + " ray-router")			
 			if r.In.Header.Get("x-rls-process") != "" {
-				fromHelperServer := false
 				rlsIp := net.ParseIP(strings.Split(r.In.RemoteAddr, ":")[0])
 
+				fromHelperServer := false
 				for _, conn := range rlsConnections {
 					if conn.IP.Equal(rlsIp) {
 						fromHelperServer = true
@@ -82,7 +82,6 @@ func startProxy() {
 					}
 				}
 				
-
 				if !fromHelperServer {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "SecurityBlock")
 					r.Out = r.Out.WithContext(behaviourctx)
@@ -92,12 +91,9 @@ func startProxy() {
 				for _, process := range processes {
 					if process.Id == r.In.Header.Get("x-rls-process") && process.RLSInfo.Type == "adm" && process.RLSInfo.IP == rlsIp.String() {
 						finalUrl, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(process.Port))
-						if err != nil {
-							return
+						if err == nil {
+							r.SetURL(finalUrl)
 						}
-
-						r.SetURL(finalUrl)
-						
 						return
 					}
 				}
@@ -112,18 +108,10 @@ func startProxy() {
 
 			var requestProject project
 			foundProcess := false
-			for _, process := range processes {
-				if process.Project.Domain == r.In.Host && !process.ProjectConfig.NotWebsite {
+			for _, project := range rconf.Projects {
+				if project.Domain == r.In.Host {
 					foundProcess = true
-					requestProject = *process.Project 
-					
-					//note here we are braking as soon as we find an process instance
-					// of that project, meaning we'll need to loop over the processes again
-					// later for finding the one with our specific channel.
-					// This is quite shitty but we dont really have an alternative
-					// since we need to know the available channels of a project
-					// to find the channel we are looking for. Might want to change to
-					// looping over processes to projects.
+					requestProject = project 
 					break
 				}
 			}
@@ -140,28 +128,25 @@ func startProxy() {
 			}
 
 			//get channel
-			_ch, err := r.In.Cookie("ray-channel")
+			channelCookie, channelCookieErr := r.In.Cookie("ray-channel")
 
 			chnl := ""
 			requiresAuth := false
 			deployments := requestProject.Deployments
-			_cookie, _cookieerr := r.In.Cookie("ray-enrolled-at")
-			if err != nil || parseEnrollmentCookie(requestProject.ForcedRenrollment, _cookie, _cookieerr) { //enroll new user
-				var rand = rand.Float64() * 100
-
+			enrolledCookie, enrolledCookieErr := r.In.Cookie("ray-enrolled-at")
+			if channelCookieErr != nil || parseEnrollmentCookie(requestProject.ForcedRenrollment, enrolledCookie, enrolledCookieErr) { //enroll new user
+				rand := rand.Float64() * 100
 				for index, deployment := range deployments {
 					if deployment.Type != "test" {
 						continue
 					}
 
-					var lastDeployment float64
+					lastDeployment := float64(-1)
 					if index != 0 {
-						lastDeployment = float64(deployments[index-1].Enrollment)
-					} else {
-						lastDeployment = -1
+						lastDeployment = deployments[index-1].Enrollment
 					}
 
-					if rand > lastDeployment && rand < float64(deployment.Enrollment) {
+					if rand > lastDeployment && rand < deployment.Enrollment {
 						chnl = deployment.Branch
 					}
 				}
@@ -174,17 +159,17 @@ func startProxy() {
 				r.Out = r.Out.WithContext(ctx)
 			} else {
 				for _, deployment := range deployments {
-					if deployment.Branch == _ch.Value {
+					if deployment.Branch == channelCookie.Value {
 						if deployment.Type == "dev" {
 							requiresAuth = true
 						}
-						chnl = _ch.Value
+						chnl = channelCookie.Value
 						break
 					}
 				}
 
 				if chnl == "" {
-					if _ch.Value != "prod" {
+					if channelCookie.Value != "prod" {
 						warnctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Specified channel not found, now enrolled on prod.")
 						warnctx = context.WithValue(warnctx, rayUtilIcon, "warn")
 						r.Out = r.Out.WithContext(warnctx)
@@ -203,12 +188,12 @@ func startProxy() {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "RequestAuth")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
-				} else if token.Value != devAuth.Token || !devAuth.Valid {
+				} else if token.Value != devAuth.Token || time.Now().After(devAuth.ValidUntil) || token.Value == "" {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "AuthError")
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
 				} else {
-					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;"+chnl+"&#39;")
+					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;" + html.EscapeString(chnl) + "&#39;")
 					infoctx = context.WithValue(infoctx, rayUtilIcon, "login")
 					r.Out = r.Out.WithContext(infoctx)
 					r.Out.Header.Del("If-None-Match")
@@ -235,7 +220,7 @@ func startProxy() {
 				//regular processes
 				var foundProcesses []process
 				for _, process := range processes { //see above for more info
-					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" {
+					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" && !process.ProjectConfig.NotWebsite {
 						if process.State == "drop" {
 							existsAsDropped = true
 							continue
@@ -301,6 +286,8 @@ func startProxy() {
 			}
 
 			tryRoute()
+
+			//TODO: use go channels instead of this piece of shit
 			triedTimes := 0
 			for !hostFound && existsAsDropped && triedTimes < 600 {
 				time.Sleep(100 * time.Millisecond)
@@ -335,28 +322,23 @@ func startProxy() {
 				r.Header.Add("Set-Cookie", "ray-enrolled-at="+strconv.FormatInt(time.Now().Unix(), 10)+";Max-Age=31536000")
 			}
 
-			if strings.Contains(r.Header.Get("Content-Type"), "text/html") {
-				icon, ok := r.Request.Context().Value(rayUtilIcon).(string)
-				message, ok2 := r.Request.Context().Value(rayUtilMessage).(string)
+			if strings.Contains(r.Header.Get("Content-Type"), "text/html") && rconf.EnableRayUtil && !strings.Contains(r.Header.Get("Cache-Control"), "no-transform") {
+				icon, _ := r.Request.Context().Value(rayUtilIcon).(string)
+				message, _ := r.Request.Context().Value(rayUtilMessage).(string)
 
 				body, err := io.ReadAll(r.Body)
+				r.Body.Close()
 				if err != nil {
 					rlog.Notify("Failed http request reading body, not injecting rayutil", "warn")
 					return nil
 				}
 
 				bodyStr := string(body)
-				rayutl := ""
-				if ok && ok2 {
-					rayutl = getRayUtilMessage(message, icon, r.Header)
-				} else {
-					rayutl = getRayUtil(r.Header)
-				}
-
+				rayutil := getRayutil(message, icon)
 				if idx := strings.LastIndex(bodyStr, "</head>"); idx != -1 {
-					bodyStr = bodyStr[:idx] + rayutl + bodyStr[idx:]
+					bodyStr = bodyStr[:idx] + rayutil + bodyStr[idx:]
 				} else {
-					bodyStr = bodyStr + rayutl
+					bodyStr = bodyStr + rayutil
 				}
 
 				body = []byte(bodyStr)

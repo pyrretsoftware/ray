@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-var devAuth *auth = &auth{
+var devAuth auth = auth{
 	Token: "",
-	Valid: false,
+	ValidUntil: time.Time{},
 }
 
 func generateAuth() {
@@ -20,16 +20,8 @@ func generateAuth() {
 		return
 	}
 	
-	devAuth = &auth{
+	devAuth = auth{
 		Token: hex.EncodeToString(_pass),
-		Valid: true,
-	}
-	go invalidateAuth(string(_pass))
-}
-
-func invalidateAuth(token string) {
-	time.Sleep(10 * time.Minute)
-	if (devAuth.Token == token) {
-		devAuth.Valid = false
+		ValidUntil: time.Now().Add(time.Minute * 10),
 	}
 }
