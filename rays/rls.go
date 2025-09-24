@@ -22,8 +22,12 @@ func HandleRLSServerConnection(conn net.Conn) {
 	//Todo: go through this
 	if remoteConn.Connection != nil {
 		rlog.Debug("connection already exists, closing existing...")
-		remoteConn.Connection.Close()
+		rlog.Debug(remoteConn.Connection.Close())
+		rlog.Debug(conn.Close())
 		remoteConn.Connection = nil
+		for _, c := range remoteConn.ResponseChannels {
+			c <- []byte("")
+		}
 	}
 	if remoteConn.Role == "server" {
 		rlog.Notify("Mismatched RLS Roles, this should not happen", "err")

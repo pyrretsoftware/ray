@@ -18,6 +18,11 @@ func AttachRlspListener(rlsConn *rlsConnection) {
 		request, err := reader.ReadString('\n')
 		if err != nil {
 			rlog.Notify("Error reading from RLS Channel: " + err.Error(), "err")
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				rlog.Notify("This error is likely from RLS's connection maintaining mechanism, which will handle reconnection. Ignoring", "warn")
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
 			rlog.Println("Attempting to reconnect...")
 			go triggerEvent("rlsConnectionLost", *rlsConn)
 			rlsConn.Connection = nil
