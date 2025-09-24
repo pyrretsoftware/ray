@@ -83,7 +83,7 @@ func AttemptConnectRLSServer(rlsconn *rlsConnection) {
 func AttemptConnectRLSServerAllConnections() {
 	for _, conn := range Connections {
 		if conn.Role == "server" && conn.Connection == nil {
-			go AttemptConnectRLSServer(conn) //expiremental: multi-thread
+			go AttemptConnectRLSServer(conn) //experimental: multi-thread
 		}
 	}
 }
