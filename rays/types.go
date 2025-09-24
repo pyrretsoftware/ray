@@ -54,7 +54,7 @@ type Extension struct {
 	ImageBlob string
 }
 
-//packets not the right terminlogly bla bla bla it sounds tuff and "rlsp request" refers to smth else
+//packets not the right terminology bla bla bla it sounds tuff and "rlsp request" refers to smth else
 type RLSPPacket struct {
 	Action string
 	Project project //only used when action is "startProject"
