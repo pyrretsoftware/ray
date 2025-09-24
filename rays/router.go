@@ -243,7 +243,7 @@ func startProxy() {
 					ipSum += ipNum
 				}
 
-				//expirimental: new pick algo
+				//experimental: new pick algo
 				weights := weightArray(foundProcesses)
 				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
 
