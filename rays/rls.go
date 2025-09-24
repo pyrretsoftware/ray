@@ -109,7 +109,7 @@ func ConnectRLSServer(rlsConn *rlsConnection) bool {
 	return true
 }
 
-func InitalizeRls() {
+func InitializeRls() {
 	if !rconf.RLSConfig.Enabled {return}
 
 	localIps := getIps()
