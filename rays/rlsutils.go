@@ -131,9 +131,10 @@ func weightArray(p []process) (r []float64, e error) {
 	for _, process := range p {
 		config, err := getHelperServerConfigFromProcess(process)
 		if err != nil {
-			return []float64{}, err
+			r = append(r, 1) //local process
+		} else {
+			r = append(r, config.Weight)
 		}
-		r = append(r, config.Weight)
 	}
 	return
 }
