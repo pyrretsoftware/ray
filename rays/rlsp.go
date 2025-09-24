@@ -18,13 +18,7 @@ func AttachRlspListener(rlsConn *rlsConnection) {
 		request, err := reader.ReadString('\n')
 		if err != nil {
 			rlog.Notify("Error reading from RLS Channel: " + err.Error(), "err")
-			_, werr := rlsConn.Connection.Write([]byte("test|connection|test|"))
-			if werr == nil {
-				rlog.Println("Connection still alive, but read error occured.")
-				continue
-			}
-
-			rlog.Println("Connnection dead, attempting to reconnect...")
+			rlog.Println("Attempting to reconnect...")
 			go triggerEvent("rlsConnectionLost", *rlsConn)
 			rlsConn.Connection = nil
 			rlsConn.ResponseChannels = map[string]chan []byte{}

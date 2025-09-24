@@ -25,7 +25,7 @@ func HandleRLSServerConnection(conn net.Conn) {
 		remoteConn.Connection.Close()
 		remoteConn.Connection = nil
 	}
-	if remoteConn.Role == "client" {
+	if remoteConn.Role == "server" {
 		rlog.Notify("Mismatched RLS Roles, this should not happen", "err")
 		rerr.Notify("Failed closing RLS Connection: ", conn.Close(), true)
 		return
