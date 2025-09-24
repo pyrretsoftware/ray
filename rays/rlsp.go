@@ -50,7 +50,7 @@ func ParseRLSPPacket(request string, conn *rlsConnection) {
 	body := pipeSplit[1]
 
 	colonSplit := strings.Split(header, ":")
-	if (len(colonSplit) != 2) {
+	if len(colonSplit) != 2 {
 		rlog.Notify("Invalid RLSP packet received.", "err")
 		return
 	}
