@@ -19,7 +19,7 @@ func HandleRLSServerConnection(conn net.Conn) {
 	remoteIp := net.ParseIP(remoteHost)
 	remoteConn := MatchConnections(remoteIp)
 
-	//Todo: go through this 
+	//Todo: go through this
 	if remoteConn.Connection != nil {
 		rlog.Debug("connection already exists, closing existing...")
 		remoteConn.Connection.Close()
