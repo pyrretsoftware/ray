@@ -3,102 +3,48 @@ package main
 //ray load balancing system
 
 import (
-	"errors"
-	"io"
 	"net"
-	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
-var rlsConnections []rlsConnection
-var RLSinitalConnectionOver = false
 
-var lookupServices []string = []string{
-	"http://1.1.1.1/cdn-cgi/trace",
-	"https://www.cloudflare.com/cdn-cgi/trace",
-	"https://checkip.amazonaws.com",
-	"https://whatismyip.akamai.com",
-}
-
-func keyValueParser(content string) string {
-	for _, line := range strings.Split(content, "\n") {
-		keyVal := strings.Split(line, "=")
-		if keyVal[0] == "ip" {
-			return keyVal[1]
-		}
-	}
-	return ""
-}
-
-func plainParser(content string) string { return content }
-
-var lookupParsers []func(content string) string = []func(content string) string{
-	keyValueParser,
-	keyValueParser,
-	plainParser,
-	plainParser,
-}
-
-func getIps() RLSipPair {
-	var outIp net.IP
-	for index, service := range lookupServices {
-		resp, err := http.Get(service)
-		if err != nil {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-
-		ba, err := io.ReadAll(resp.Body)
-		if err != nil {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-		lip := lookupParsers[index](string(ba))
-		if lip == "" {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-
-		outIp = net.ParseIP(strings.ReplaceAll(lip, " ", ""))
+func HandleRLSServerConnection(conn net.Conn) {
+	remoteHost, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+	if err != nil {
+		rlog.Notify("Error getting remote adress.", "err")
+		return
 	}
 
-	interfaces, err := net.InterfaceAddrs()
-	rerr.Fatal("Failed grabbing network interfaces.", err)
+	remoteIp := net.ParseIP(remoteHost)
+	remoteConn := MatchConnections(remoteIp)
 
-	var privIp net.IP
-	for _, addr := range interfaces {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
-
-		if ip.IsPrivate() {
-			privIp = ip
-			if ip.To4() != nil {
-				break
-			}
-		}
+	//Todo: go through this 
+	if remoteConn.Connection != nil {
+		rlog.Debug("connection already exists, closing existing...")
+		remoteConn.Connection.Close()
+		remoteConn.Connection = nil
 	}
-	return RLSipPair{
-		Public:  outIp,
-		Private: privIp,
+	if remoteConn.Role == "client" {
+		rlog.Notify("Mismatched RLS Roles, this should not happen", "err")
+		rerr.Notify("Failed closing RLS Connection: ", conn.Close(), true)
+		return
+	}
+
+	rlog.Notify("Connected to RLS helper server "+ remoteConn.Name + " (with server role)", "done")
+	remoteConn.Connection = conn
+	go AttachRlspListener(remoteConn)
+
+	if RLSinitalConnectionOver {
+		StartAdministeredProjects(*remoteConn)
 	}
 }
 
-func addUpIp(ip net.IP) int {
-	var ipSum int
-	for _, b := range ip {
-		ipSum += int(b)
-	}
-	return ipSum
-}
+//run as new goroutine
+func ListenAndServeRLS() {
+	listn, err := net.Listen("tcp", ":5076")
+	rerr.Fatal("Cannot start RLS server: ", err, true)
 
-func respondRLSServer(listn net.Listener) {
 	for {
 		conn, err := listn.Accept()
 		if err != nil {
@@ -106,129 +52,90 @@ func respondRLSServer(listn net.Listener) {
 			continue
 		}
 
-		remoteHost, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-		if err != nil {
-			rlog.Notify("Error getting remote adress.", "err")
-			continue
-		}
-		remoteIp := net.ParseIP(remoteHost)
-
-		var matchedRlsConn *rlsConnection
-		var matchErr error
-		for i := range rlsConnections {
-			if rlsConnections[i].IP.Equal(remoteIp) {
-				if rlsConnections[i].Role != "client" {
-					matchErr = errors.New("mismatched roles")
-				}
-				if rlsConnections[i].Connection != nil {
-					rfrnc := *rlsConnections[i].Connection
-					rfrnc.Close()
-					rlsConnections[i].Connection = nil
-				}
-				matchedRlsConn = &rlsConnections[i]
-			}
-		}
-		if matchErr != nil {
-			rlog.Notify("Connection cancelled: "+matchErr.Error(), "err")
-			continue
-		}
-
-		rlog.Notify("Connected to RLS helper server "+ matchedRlsConn.Name + " (with server role)", "done")
-		matchedRlsConn.Connection = &conn
-		attachRlspListener(matchedRlsConn)
-
-		if RLSinitalConnectionOver {
-			reloadRLSPProjects(*matchedRlsConn)
-		}
+		go HandleRLSServerConnection(conn)
 	}
 }
 
-func startRLSServer() {
-	listn, err := net.Listen("tcp", ":5076")
-	rerr.Fatal("Cannot start RLS server: ", err, true)
-	go respondRLSServer(listn)
-}
-
-func reconnectLoop() {
-	for {
-		time.Sleep(30 * time.Second)
-		connectToRLSServers()
-	}
-}
-
-func tryRLSConnect(rlsconn rlsConnection, indx int) {
+//attempts to connect with connectrlsserver three times
+func AttemptConnectRLSServer(rlsconn *rlsConnection) {
 	rlog.Println("Attempting to connect to RLS Server (" + rlsconn.Name + ")")
-	ok := false
-	for i := 0; i < 3 && !ok; i++ {
-		ok = connectRLSServer(&rlsconn)
-		if !ok {
+	connected := false
+	for i := 0; i < 3 && !connected; i++ {
+		connected = ConnectRLSServer(rlsconn)
+		if !connected {
 			rlog.Notify("Failed connecting to RLS Server (attempt "+strconv.Itoa(i+1)+")", "err")
 			time.Sleep(time.Second)
 		}
 	}
 
-	if !ok {
+	if !connected {
 		rlog.Notify("Failed connecting to RLS Server ("+rlsconn.Name+") three times. Trying again in ca. 30 seconds", "err")
 		triggerEvent("rlsConnectionFailed", rlsconn)
 	} else {
 		rlog.Notify("Connected to RLS helper server "+ rlsconn.Name + " (with client role)", "done")
 		if RLSinitalConnectionOver {
-			reloadRLSPProjects(rlsconn)
-		}
-
-	}
-	rlsConnections[indx] = rlsconn
-}
-
-func connectToRLSServers() {
-	for indx, rlsconn := range rlsConnections {
-		if rlsconn.Role == "server" && rlsconn.Connection == nil {
-			tryRLSConnect(rlsconn, indx)
+			StartAdministeredProjects(*rlsconn)
 		}
 	}
 }
 
-func connectRLSServer(rlsConn *rlsConnection) bool {
+//calls AttemptConnectRLSServer on all server connections
+func AttemptConnectRLSServerAllConnections() {
+	for _, conn := range Connections {
+		if conn.Role == "server" && conn.Connection == nil {
+			go AttemptConnectRLSServer(conn) //expiremental: multi-thread
+		}
+	}
+}
+
+//calls AttemptConnectRLSServerAllConnections every 30 seconds to initate new connections to non-connected helper servers
+func MaintainConnections() {
+	for {
+		time.Sleep(30 * time.Second)
+		AttemptConnectRLSServerAllConnections()
+	}
+}
+
+func ConnectRLSServer(rlsConn *rlsConnection) bool {
 	conn, err := net.Dial("tcp", net.JoinHostPort(rlsConn.IP.String(), "5076"))
 	if err != nil {
 		rlog.Notify("Error connecting to RLS server", "err")
 		return false
 	}
 
-	rlsConn.Connection = &conn
-	attachRlspListener(rlsConn)
+	rlsConn.Connection = conn
+	go AttachRlspListener(rlsConn)
 	go triggerEvent("rlsConnectionMade", *rlsConn)
 	return true
 }
 
-func initRLS() {
+func InitalizeRls() {
 	if !rconf.RLSConfig.Enabled {return}
+
 	localIps := getIps()
 	for _, helperServer := range rconf.RLSConfig.Helpers {
-		rlog.Println("Connecting to helper server " + helperServer.Name)
 		var rlsConn rlsConnection
 		rlsConn.Name = helperServer.Name
 		rlsConn.ResponseChannels = map[string]chan []byte{}
-
-		ips, err := net.LookupIP(helperServer.Host)
+		remoteIps, err := net.LookupIP(helperServer.Host)
+		
+		rlog.Println("Connecting to helper server " + helperServer.Name)
 		if err != nil {
 			rlog.Notify("Error looking up helper server!", "err")
-			rlsConnections = append(rlsConnections, rlsConn)
-		}
-		rlsConn.IP = ips[0]
-
-		if rlsConn.IP.IsLoopback() || rlsConn.IP.Equal(localIps.Private) || rlsConn.IP.Equal(localIps.Public) {
-			rlog.Notify("RLS: Cannot specify this server as a helper server.", "err")
 			continue
 		}
 
-		//if an ip is private, we compare with our private ip and if the ip is public, we compare with our public ip
+		rlsConn.IP = remoteIps[0]
+		if rlsConn.IP.IsLoopback() || rlsConn.IP.Equal(localIps.Private) || rlsConn.IP.Equal(localIps.Public) {
+			rlog.Notify("RLS: Cannot specify this server as a helper server, this address points to the local server.", "err")
+			continue
+		}
+
+		//if the ip is private, we compare with our private ip. if the ip is public, we compare with our public ip
 		//that way roles can be determined by both parties regardless
-		var localIp net.IP
+		localIp := localIps.Public
 		if rlsConn.IP.IsPrivate() {
 			localIp = localIps.Private
-		} else {
-			localIp = localIps.Public
 		}
 
 		if addUpIp(localIp) > addUpIp(rlsConn.IP) { //bigger one gets to be server
@@ -239,10 +146,11 @@ func initRLS() {
 			rlog.Debug("Helper server " + helperServer.Name + " has rls role server")
 		}
 
-		rlsConnections = append(rlsConnections, rlsConn)
+		Connections = append(Connections, &rlsConn)
 	}
-	connectToRLSServers()
-	startRLSServer()
-	go reconnectLoop()
-	go broadcastProcessReportsLoop()
+
+	AttemptConnectRLSServerAllConnections()
+	go MaintainConnections()
+	go ListenAndServeRLS()
+	go MaintainProcessReportBroadcast()
 }

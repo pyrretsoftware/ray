@@ -33,7 +33,7 @@ func main() {
 		rlog.Debug("Debug messages are shown.")
 		go triggerEvent("raysStart", nil)
 		rlog.Println("Setting up ray enviroument...")
-		initRLS()
+		InitalizeRls()
 		SetupEnv()
 		startProxy()
 		select {}

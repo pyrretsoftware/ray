@@ -54,7 +54,8 @@ type Extension struct {
 	ImageBlob string
 }
 
-type RLSPRequest struct {
+//packets not the right terminlogly bla bla bla it sounds tuff and "rlsp request" refers to smth else
+type RLSPPacket struct {
 	Action string
 	Project project //only used when action is "startProject"
 	ProjectHardCommit string //only used when action is "startProject"
@@ -69,7 +70,7 @@ type rlsResponse struct {
 type rlsConnection struct {
 	IP net.IP
 	Role string //enum, either client or server
-	Connection *net.Conn
+	Connection net.Conn
 	Name string
 	ResponseChannels map[string]chan[]byte
 }
