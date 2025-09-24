@@ -251,7 +251,7 @@ func setupRlspProject(project *project, targetName string, hardCommit string) {
 	var report []process
 	rawReport := SendRawRLSPRequest(string(ba), conn)
 	jerr := json.Unmarshal(rawReport, &report)
-	if jerr != nil {SendRawRLSPRequest(string(ba), conn)
+	if jerr != nil {
 		rlog.Notify("Couldn't unmarshal json for RLSP packet.", "err")
 		return
 	}
