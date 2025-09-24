@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -102,13 +103,17 @@ func MatchConnections(remote net.IP) *rlsConnection {
 	return nil
 }
 
-func getHelperServerConfigFromProcess(proc process) helperServer {
+func getHelperServerConfigFromProcess(proc process) (helperServer, error) {
 	var foundConn *rlsConnection
 	for _, conn := range Connections {
 		if conn.IP.Equal(net.ParseIP(proc.RLSInfo.IP)) {
 			foundConn = conn
 			break
 		}
+	}
+
+	if foundConn == nil {
+		return helperServer{}, errors.New("no connection found")
 	}
 
 	var foundHelperServer helperServer
@@ -119,12 +124,15 @@ func getHelperServerConfigFromProcess(proc process) helperServer {
 		}
 	}
 
-	return foundHelperServer
+	return foundHelperServer, nil
 }
 
-func weightArray(p []process) (r []float64) {
+func weightArray(p []process) (r []float64, e error) {
 	for _, process := range p {
-		config := getHelperServerConfigFromProcess(process)
+		config, err := getHelperServerConfigFromProcess(process)
+		if err != nil {
+			return []float64{}, err
+		}
 		r = append(r, config.Weight)
 	}
 	return
