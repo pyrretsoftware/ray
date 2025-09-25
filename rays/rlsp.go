@@ -5,31 +5,41 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"net"
+	"os"
 	"slices"
 	"strings"
 	"time"
 )
 
+func HandleRlsIOError(err error, rlsConn *rlsConnection) {
+	if strings.Contains(err.Error(), "use of closed network connection") {
+		rlog.Notify("This error is likely from RLS's connection maintaining mechanism, which will handle reconnection. Ignoring", "warn")
+		return
+	}
+	rlog.Println("Attempting to reconnect...")
+	go triggerEvent("rlsConnectionLost", *rlsConn)
+	rlsConn.Connection = nil
+	rlsConn.ResponseChannels = map[string]chan []byte{}
+	if rlsConn.Role == "server" {
+		AttemptConnectRLSServer(rlsConn)
+	}
+}
+
 //run in new goroutine
 func AttachRlspListener(rlsConn *rlsConnection) {
+	rlsConn.Connection.SetReadDeadline(time.Now().Add(10 * time.Second))
+	reader := bufio.NewReader(rlsConn.Connection)
 	for {
-		reader := bufio.NewReader(rlsConn.Connection)
 		request, err := reader.ReadString('\n')
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			continue
+		}
+
 		if err != nil {
 			rlog.Notify("Error reading from RLS Channel: " + err.Error(), "err")
-			if strings.Contains(err.Error(), "use of closed network connection") {
-				rlog.Notify("This error is likely from RLS's connection maintaining mechanism, which will handle reconnection. Ignoring", "warn")
-				break
-			}
-			rlog.Println("Attempting to reconnect...")
-			go triggerEvent("rlsConnectionLost", *rlsConn)
-			rlsConn.Connection = nil
-			rlsConn.ResponseChannels = map[string]chan []byte{}
-
-			if rlsConn.Role == "server" {
-				AttemptConnectRLSServer(rlsConn)
-			}
+			HandleRlsIOError(err, rlsConn)
 			break
 		}
 
@@ -40,8 +50,9 @@ func AttachRlspListener(rlsConn *rlsConnection) {
 func ParseRLSPPacket(request string, conn *rlsConnection) {
 	request = strings.TrimSuffix(request, "\n")
 	pipeSplit := strings.Split(request, "|")
-	if len(pipeSplit) != 2 && pipeSplit[0] != "test" {
+	if len(pipeSplit) != 2 {
 		rlog.Notify("Invalid RLSP packet received.", "err")
+		rlog.Debug(request)
 		return
 	}
 	header := pipeSplit[0]
@@ -50,6 +61,7 @@ func ParseRLSPPacket(request string, conn *rlsConnection) {
 	colonSplit := strings.Split(header, ":")
 	if len(colonSplit) != 2 {
 		rlog.Notify("Invalid RLSP packet received.", "err")
+		rlog.Debug(request)
 		return
 	}
 	packetType := colonSplit[0]
@@ -208,7 +220,10 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) []byte {
 	rchan := make(chan []byte)
 	conn.ResponseChannels[uuid] = rchan
 
-	conn.Connection.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
+	_, err := conn.Connection.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
+	if err != nil {
+		HandleRlsIOError(err, conn)
+	}
 	response := <- rchan
 	delete(conn.ResponseChannels, uuid)
 

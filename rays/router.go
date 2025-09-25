@@ -244,10 +244,7 @@ func startProxy() {
 				}
 
 				//experimental: new pick algo
-				weights, err := weightArray(foundProcesses)
-				if err != nil {
-					return
-				}
+				weights := weightArray(foundProcesses)
 				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
 
 				//default: local server over tcp

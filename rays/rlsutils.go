@@ -127,7 +127,7 @@ func getHelperServerConfigFromProcess(proc process) (helperServer, error) {
 	return foundHelperServer, nil
 }
 
-func weightArray(p []process) (r []float64, e error) {
+func weightArray(p []process) (r []float64) {
 	for _, process := range p {
 		config, err := getHelperServerConfigFromProcess(process)
 		if err != nil {
