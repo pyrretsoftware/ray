@@ -29,9 +29,9 @@ func HandleRlsIOError(err error, rlsConn *rlsConnection) {
 
 //run in new goroutine
 func AttachRlspListener(rlsConn *rlsConnection) {
-	rlsConn.Connection.SetReadDeadline(time.Now().Add(10 * time.Second))
 	reader := bufio.NewReader(rlsConn.Connection)
 	for {
+		rlsConn.Connection.SetReadDeadline(time.Now().Add(10 * time.Second))
 		request, err := reader.ReadString('\n')
 		if errors.Is(err, os.ErrDeadlineExceeded) {
 			continue
@@ -52,7 +52,6 @@ func ParseRLSPPacket(request string, conn *rlsConnection) {
 	pipeSplit := strings.Split(request, "|")
 	if len(pipeSplit) != 2 {
 		rlog.Notify("Invalid RLSP packet received.", "err")
-		rlog.Debug(request)
 		return
 	}
 	header := pipeSplit[0]
@@ -61,7 +60,6 @@ func ParseRLSPPacket(request string, conn *rlsConnection) {
 	colonSplit := strings.Split(header, ":")
 	if len(colonSplit) != 2 {
 		rlog.Notify("Invalid RLSP packet received.", "err")
-		rlog.Debug(request)
 		return
 	}
 	packetType := colonSplit[0]
