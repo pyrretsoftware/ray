@@ -1,4 +1,4 @@
-module pyrret.com/rayc
+module github.com/pyrretsoftware/ray/rayc
 
 go 1.24.4
 
