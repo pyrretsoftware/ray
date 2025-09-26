@@ -18,16 +18,22 @@ func HandleRLSServerConnection(conn net.Conn) {
 
 	remoteIp := net.ParseIP(remoteHost)
 	remoteConn := MatchConnections(remoteIp)
+	if remoteConn == nil {
+    	rlog.Notify("No matching RLS connection found for remote IP", "err")
+    	conn.Close()
+    	return
+	}
 
 	//Todo: go through this
 	if remoteConn.Connection != nil {
-		rlog.Debug("connection already exists, closing existing...")
+	rlog.Debug("connection already exists, closing existing...")
         rlog.Debug(remoteConn.Connection.Close())
-		remoteConn.Connection = nil
+		remoteConn.Connection = conn
 		for _, c := range remoteConn.ResponseChannels {
 			close(c)
 		}
 		remoteConn.ResponseChannels = map[string]chan []byte{}
+		return
 	}
 	if remoteConn.Role == "server" {
 		rlog.Notify("Mismatched RLS Roles, this should not happen", "err")

@@ -21,6 +21,10 @@ func HandleRlsIOError(err error, rlsConn *rlsConnection) {
 	rlog.Println("Attempting to reconnect...")
 	go triggerEvent("rlsConnectionLost", *rlsConn)
 	rlsConn.Connection = nil
+
+	for _, c := range rlsConn.ResponseChannels {
+    	close(c)
+	}
 	rlsConn.ResponseChannels = map[string]chan []byte{}
 	if rlsConn.Role == "server" {
 		AttemptConnectRLSServer(rlsConn)
@@ -220,6 +224,7 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) []byte {
 
 	_, err := conn.Connection.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
 	if err != nil {
+		delete(conn.ResponseChannels, uuid)
 		HandleRlsIOError(err, conn)
 	}
 	response := <- rchan
