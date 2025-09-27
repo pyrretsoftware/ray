@@ -186,12 +186,12 @@ func MaintainProcessReportBroadcast() { //run as new goroutine/async
 
 func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 	netConn, err := net.Dial("tcp", net.JoinHostPort(conn.IP.String(), "5076"))
-	defer netConn.Close()
 	if err != nil {
 		rlog.Notify("Error occured attempting to communicate with RLS Server: " + err.Error(), "err")
 		conn.Health.Healthy = false
 		return "", err
 	}
+	defer netConn.Close()
 
 	uuid := getUuid()
 	_, err = netConn.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
