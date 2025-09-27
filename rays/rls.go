@@ -74,9 +74,9 @@ func HandleRLSServerConnection(netConn net.Conn) {
 	remoteIp := net.ParseIP(remoteHost)
 	remoteConn := MatchConnections(remoteIp)
 	if remoteConn == nil {
-    	rlog.Notify("No matching RLS connection found for remote IP", "err")
-    	netConn.Close()
-    	return
+		rlog.Notify("No matching RLS connection found for remote IP", "err")
+		netConn.Close()
+		return
 	}
 
 	reader := bufio.NewReader(netConn)
