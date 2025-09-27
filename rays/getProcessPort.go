@@ -22,6 +22,7 @@ var platformPidSeperator = map[string]string{
 	"linux" : "pid=",
 }
 
+//todo: this shouldnt panic 
 func parse(content string) map[string][]string {
 	table := make(map[string][]string)
 

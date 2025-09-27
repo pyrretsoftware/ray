@@ -28,7 +28,6 @@ func ParseRLSPPacket(request string, conn *rlsConnection, netConn net.Conn) {
 		return
 	}
 	packetType := colonSplit[0]
-	identifier := colonSplit[1]
 	
 	switch packetType {
 	case "response":
@@ -41,11 +40,11 @@ func ParseRLSPPacket(request string, conn *rlsConnection, netConn net.Conn) {
 			return
 		}
 
-		ParseRLSPRequest(packet, conn, netConn, identifier)
+		ParseRLSPRequest(packet, conn, netConn)
 	}
 }
 
-func ParseRLSPRequest(packet RLSPPacket, conn *rlsConnection, netConn net.Conn, id string) {
+func ParseRLSPRequest(packet RLSPPacket, conn *rlsConnection, netConn net.Conn) {
 	switch packet.Action {
 	case "healthCheck":
 		report := rlsHealthReport{
@@ -58,7 +57,7 @@ func ParseRLSPRequest(packet RLSPPacket, conn *rlsConnection, netConn net.Conn, 
 			rlog.Notify("Failed marshaling json: " + err.Error(), "err")
 			return
 		}
-		SendRawRLSPResponse(string(reportBa), id, netConn)
+		SendRawRLSPResponse(string(reportBa), netConn)
 	case "startProject":
 		host := conn.IP.String()
 		setupLocalProject(&packet.Project, host, packet.ProjectHardCommit)
@@ -70,10 +69,10 @@ func ParseRLSPRequest(packet RLSPPacket, conn *rlsConnection, netConn net.Conn, 
 			return
 		}
 
-		SendRawRLSPResponse(string(reportBa), id, netConn)
+		SendRawRLSPResponse(string(reportBa), netConn)
 	case "processReport":
 		SyncToProcessReport(packet.Processes, conn)
-		SendRawRLSPResponse("alright"+"\n", id, netConn)
+		SendRawRLSPResponse("alright"+"\n", netConn)
 	case "removeProcess":
 		for _, process := range processes {
 			if process.Id == packet.RemoveProcessTarget {
@@ -164,7 +163,7 @@ func BroadcastAllProcessReports() {
 		}
 
 		if string(response) != "alright" {
-			rlog.Notify("Helper server reported error updating processes administered by this server", "err")
+			rlog.Notify("Helper server reported error updating processes administered by this server: " + string(response), "err")
 		}
 	}
 }
@@ -193,8 +192,7 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 	}
 	defer netConn.Close()
 
-	uuid := getUuid()
-	_, err = netConn.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
+	_, err = netConn.Write([]byte("request:|" + rawBody + "\n"))
 	if err != nil {
 		rlog.Notify("Error occured writing to RLS Server: " + err.Error(), "err")
 		conn.Health.Healthy = false
@@ -205,8 +203,8 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 	return rd.ReadString('\n')
 }
 
-func SendRawRLSPResponse(rawBody string, reqId string, conn net.Conn) {
-	conn.Write([]byte("response:" + reqId + "|" + rawBody + "\n"))
+func SendRawRLSPResponse(rawBody string, conn net.Conn) {
+	conn.Write([]byte(rawBody + "\n"))
 }
 
 func setupRlspProject(project *project, targetName string, hardCommit string) {
