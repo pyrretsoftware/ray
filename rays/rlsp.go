@@ -195,6 +195,11 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 
 	uuid := getUuid()
 	_, err = netConn.Write([]byte("request:" + uuid + "|" + rawBody + "\n"))
+	if err != nil {
+		rlog.Notify("Error occured writing to RLS Server: " + err.Error(), "err")
+		conn.Health.Healthy = false
+		return "", err
+	}
 
 	rd := bufio.NewReader(netConn)
 	return rd.ReadString('\n')
