@@ -63,16 +63,21 @@ type RLSPPacket struct {
 	Processes []process
 }
 
-type rlsResponse struct {
-	Data []byte
-	Id string
+//more stuff will be added to this...
+type rlsHealthReport struct {
+	Issued time.Time
+	Received time.Time
+	RayVersion string
+	GoVersion string
+}
+type rlsConnectionHealth struct {
+	Healthy bool
+	Report rlsHealthReport
 }
 type rlsConnection struct {
 	IP net.IP
-	Role string //enum, either client or server
-	Connection net.Conn
 	Name string
-	ResponseChannels map[string]chan[]byte
+	Health rlsConnectionHealth
 }
 type helperServer struct {
 	Host string `json:"Host,omitempty"`
