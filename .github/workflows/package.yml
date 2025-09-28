@@ -2,8 +2,8 @@ name: build
 
 permissions:
   contents: read
-  pages: write       # ✅ needed for GitHub Pages
-  id-token: write    # ✅ needed for GitHub Pages
+  pages: write       # needed for GitHub Pages
+  id-token: write    # needed for GitHub Pages
 
 on:
   push:
@@ -66,19 +66,25 @@ jobs:
           path: rayinstall/rayinstall${{ matrix.goos == 'windows' && '.exe' || '' }}
 
   collect:
-    # Collect all matrix artifacts into one folder
+    # ✅ Flatten all artifacts into a single folder called "public"
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
+          path: artifacts
+
+      - name: Flatten artifact directories
+        run: |
+          mkdir public
+          find artifacts -type f -exec mv {} public/ \;
+          ls -l public
 
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist   # everything inside will be public
+          path: public   # everything inside will be at the site root
 
   deploy:
     needs: collect
