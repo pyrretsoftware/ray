@@ -9,7 +9,7 @@ import (
 )
 
 var Connections []*rlsConnection
-var RLSinitalConnectionOver = false
+var RLSinitialConnectionOver = false
 
 var lookupServices []string = []string{
 	"http://1.1.1.1/cdn-cgi/trace",

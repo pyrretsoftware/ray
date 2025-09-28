@@ -60,7 +60,7 @@ func HealthCheckConnections() {
 			rlog.Notify(conn.Name + " Passed health check, running ray " + report.RayVersion + " and go " + report.GoVersion + ". The report was issued " + report.Issued.Format(time.StampMilli) + " and received just now (" + strconv.FormatInt(report.Received.Sub(report.Issued).Milliseconds(), 10) + "ms delay)", "done")
 			conn.Health.Report = report
 			conn.Health.Healthy = true
-			if RLSinitalConnectionOver {
+			if RLSinitialConnectionOver {
 				StartOutsourcedProjects(*conn)
 			}
 		}
