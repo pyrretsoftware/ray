@@ -121,12 +121,14 @@ func rayReload(permissons []string) ComError {
 		for _, project := range rconf.Projects {
 			startProject(&project, "")
 		}
+
+		UpdateConnections()
 		return Success 
 	}
 	return NotPermitted
 }
 func rayUpdate(permissons []string) ComError {
-	if permOk(permissons, "ray:reload", "ray:all", "special:all", "special:ext") {
+	if permOk(permissons, "ray:update", "ray:all", "special:all", "special:ext") {
 		updateProjects(true)
 		return Success
 	}

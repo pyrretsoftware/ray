@@ -92,9 +92,8 @@ func HandleRLSServerConnection(netConn net.Conn) {
 	go ParseRLSPPacket(request, remoteConn, netConn)
 }
 
-func InitializeRls() {
-	if !rconf.RLSConfig.Enabled {return}
-
+//expiremental: hot reload rls connections
+func UpdateConnections() {
 	localIps := getIps()
 	for _, helperServer := range rconf.RLSConfig.Helpers {
 		var rlsConn rlsConnection
@@ -115,7 +114,11 @@ func InitializeRls() {
 
 		Connections = append(Connections, &rlsConn)
 	}
+}
 
+func InitializeRls() {
+	if !rconf.RLSConfig.Enabled {return}
+	UpdateConnections()
 	go ListenAndServeRLS()
 	go StartHealthChecks()
 	go MaintainProcessReportBroadcast()

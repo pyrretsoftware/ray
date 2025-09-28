@@ -163,7 +163,7 @@ func BroadcastAllProcessReports() {
 		}
 
 		if string(response) != "alright" {
-			rlog.Notify("Helper server reported error updating processes administered by this server: " + string(response) + ".", "err")
+			rlog.Notify("Helper server reported error updating processes administered by this server: " + string(response), "err")
 		}
 	}
 }
@@ -201,6 +201,9 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 
 	rd := bufio.NewReader(netConn)
 	repsonse, err := rd.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
 	return repsonse[:len(repsonse) - 1], err
 }
 
