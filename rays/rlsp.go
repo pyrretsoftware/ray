@@ -200,11 +200,11 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 	}
 
 	rd := bufio.NewReader(netConn)
-	repsonse, err := rd.ReadString('\n')
+	response, err := rd.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-	return repsonse[:len(repsonse) - 1], err
+	return response[:len(response) - 1], err
 }
 
 func SendRawRLSPResponse(rawBody string, conn net.Conn) {
