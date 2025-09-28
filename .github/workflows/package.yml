@@ -2,6 +2,8 @@ name: build
 
 permissions:
   contents: read
+  pages: write       # ✅ needed for GitHub Pages
+  id-token: write    # ✅ needed for GitHub Pages
 
 on:
   push:
@@ -42,14 +44,9 @@ jobs:
         run: |
           cd rays
           go build -o rays -ldflags "-X 'main.Version=$(cat version)'"
-          
-          # Copy rays binary to rayinstall directory
           cp rays ../rayinstall/
-          
-          # Create version
-          RAY_VERSION=$(cat version)
-          echo "$RAY_VERSION" > ../rayinstall/version
-          
+          cat version > ../rayinstall/version
+
       - name: Build rayinstall for target platform
         env:
           GOOS: ${{ matrix.goos }}
@@ -61,9 +58,35 @@ jobs:
             OUTPUT_NAME+=".exe"
           fi
           go build -o $OUTPUT_NAME .
-          
-      - name: Upload Binaries
+
+      - name: Upload Binaries (artifact per matrix)
         uses: actions/upload-artifact@v4
         with:
           name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
           path: rayinstall/rayinstall${{ matrix.goos == 'windows' && '.exe' || '' }}
+
+  collect:
+    # Collect all matrix artifacts into one folder
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Upload artifact for Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist   # everything inside will be public
+
+  deploy:
+    needs: collect
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
