@@ -248,8 +248,6 @@ func startProxy() {
 				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
 				
 				pick = foundProcesses[0]
-				rlog.Debug("overwrote pick to ")
-				rlog.Debug(pick.Id)
 				//default: local server over tcp
 				destUrl := "http://127.0.0.1:" + strconv.Itoa(pick.Port)
 				destUds := ""
