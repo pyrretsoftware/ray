@@ -2,8 +2,6 @@ name: build
 
 permissions:
   contents: read
-  pages: write       # needed for GitHub Pages
-  id-token: write    # needed for GitHub Pages
 
 on:
   push:
@@ -44,9 +42,14 @@ jobs:
         run: |
           cd rays
           go build -o rays -ldflags "-X 'main.Version=$(cat version)'"
+          
+          # Copy rays binary to rayinstall directory
           cp rays ../rayinstall/
-          cat version > ../rayinstall/version
-
+          
+          # Create version
+          RAY_VERSION=$(cat version)
+          echo "$RAY_VERSION" > ../rayinstall/version
+          
       - name: Build rayinstall for target platform
         env:
           GOOS: ${{ matrix.goos }}
@@ -58,6 +61,9 @@ jobs:
             OUTPUT_NAME+=".exe"
           fi
           go build -o $OUTPUT_NAME .
-
-      - name: Upload Binaries (artifact per matrix)
+          
+      - name: Upload Binaries
         uses: actions/upload-artifact@v4
+        with:
+          name: rayinstall-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          path: rayinstall/rayinstall${{ matrix.goos == 'windows' && '.exe' || '' }}
