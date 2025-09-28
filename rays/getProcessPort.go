@@ -60,7 +60,7 @@ func getProcessPorts(pid int) []string {
 
 	table, err := parse(string(out))
 	if err != nil {
-		rlog.Notify("Rays were not able to resolve certain process information.", "warn")
+		rlog.Notify("Rays were not able to resolve certain process information: " + err.Error(), "warn")
 		return []string{}
 	}
 
