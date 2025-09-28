@@ -6,103 +6,96 @@ import (
 	"bufio"
 	"encoding/json"
 	"net"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
 )
 
-func attachRlspListener(rlsConn *rlsConnection) {
-	conn := *rlsConn.Connection
+func ParseRLSPPacket(request string, conn *rlsConnection, netConn net.Conn) {
+	request = strings.TrimSuffix(request, "\n")
+	pipeSplit := strings.Split(request, "|")
+	if len(pipeSplit) != 2 {
+		rlog.Notify("Invalid RLSP packet received.", "err")
+		return
+	}
+	header := pipeSplit[0]
+	body := pipeSplit[1]
 
-	go func() {
-		for {
-			rdr := bufio.NewReader(conn)
-			rString, err := rdr.ReadString('\n')
-			if err != nil {
-				rlog.Notify("Error reading from RLS Channel: " + err.Error(), "err")
-				rlsConn.Connection = nil
-				rlsConn.ResponseChannels = map[string]chan []byte{}
-				go triggerEvent("rlsConnectionLost", *rlsConn)
-				rlog.Println("Attempting to reconnect...")
-
-				for i, c := range rlsConnections {
-					if c.IP.Equal(rlsConn.IP) && c.Name == rlsConn.Name {
-						rlsConnections[i] = *rlsConn
-						if rlsConn.Role == "server" {
-							tryRLSConnect(*rlsConn, i)
-						}
-						break
-					}
-				}
-				break
-			}
-			rString = strings.ReplaceAll(rString, "\n", "")
-
-			pipeSplit := strings.Split(rString, "|")
-			if len(pipeSplit) < 2 {
-				rlog.Notify("Invalid RLS packet received.", "err")
-				continue
-			}
-			header := pipeSplit[0]
-			body := pipeSplit[1]
-
-			colonSplit := strings.Split(header, ":")
-			if colonSplit[0] == "response" {
-				respChan, respChanOk := rlsConn.ResponseChannels[colonSplit[1]]
-				if respChanOk {
-					respChan <- []byte(body)
-				}
-			} else if colonSplit[0] == "request" {
-				var req RLSPRequest
-
-				err := json.Unmarshal([]byte(body), &req)
-				if err != nil {
-					rlog.Notify("Error parsing from RLS channel: "+err.Error(), "err")
-					continue
-				}
-
-				switch req.Action {
-				case "startProject":
-					hst, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
-					
-					setupLocalProject(&req.Project, hst, req.ProjectHardCommit)
-					involvedProcesses := rlspProcessReport(rlsConn.IP.String())
-
-					ba, err := json.Marshal(involvedProcesses)
-					if err != nil {
-						rlog.Notify("Failed marshaling json: "+err.Error(), "err")
-						continue
-					}
-					sendRlspResponse(string(ba), *rlsConn, colonSplit[1])
-				case "processReport":
-					handleRlspProcessReport(req.Processes, *rlsConn)
-					sendRlspResponse("alright"+"\n", *rlsConn, colonSplit[1])
-				case "removeProcess":
-					for _, process := range processes {
-						if process.Id == req.RemoveProcessTarget {
-							process.remove()
-						}
-					}
-				}
-			}
+	colonSplit := strings.Split(header, ":")
+	if len(colonSplit) != 2 {
+		rlog.Notify("Invalid RLSP packet received.", "err")
+		return
+	}
+	packetType := colonSplit[0]
+	
+	switch packetType {
+	case "response":
+		netConn.Write([]byte(body))
+	case "request":
+		var packet RLSPPacket
+		err := json.Unmarshal([]byte(body), &packet)
+		if err != nil {
+			rlog.Notify("Error parsing from RLS channel: " + err.Error(), "err")
+			return
 		}
-	}()
+
+		ParseRLSPRequest(packet, conn, netConn)
+	}
 }
 
-func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) {
-	var newProcesses []*process
-	var updatedProcessesIds []string
-	var oldOutsourcedProcesses []string
+func ParseRLSPRequest(packet RLSPPacket, conn *rlsConnection, netConn net.Conn) {
+	switch packet.Action {
+	case "healthCheck":
+		report := rlsHealthReport{
+			Issued: time.Now(),
+			RayVersion: Version,
+			GoVersion: runtime.Version(),
+		}
+		reportBa, err := json.Marshal(report)
+		if err != nil {
+			rlog.Notify("Failed marshaling json: " + err.Error(), "err")
+			return
+		}
+		SendRawRLSPResponse(string(reportBa), netConn)
+	case "startProject":
+		host := conn.IP.String()
+		setupLocalProject(&packet.Project, host, packet.ProjectHardCommit)
+
+		report := RLSPProcessReport(host)
+		reportBa, err := json.Marshal(report)
+		if err != nil {
+			rlog.Notify("Failed marshaling json: " + err.Error(), "err")
+			return
+		}
+
+		SendRawRLSPResponse(string(reportBa), netConn)
+	case "processReport":
+		SyncToProcessReport(packet.Processes, conn)
+		SendRawRLSPResponse("alright"+"\n", netConn)
+	case "removeProcess":
+		for _, process := range processes {
+			if process.Id == packet.RemoveProcessTarget {
+				process.remove()
+			}
+		}
+	}
+}
+
+func SyncToProcessReport(report []process, conn *rlsConnection) {
+	var syncedProcesses []*process
+	var syncedProcessesIds []string
+	var unsyncedProcessesIds []string
 	for _, prc := range processes {
-		if prc.RLSInfo.Type == "outsourced" && prc.RLSInfo.IP == rlsConn.IP.String() {
-			oldOutsourcedProcesses = append(oldOutsourcedProcesses, prc.Id)
+		if prc.RLSInfo.Type == "outsourced" && prc.RLSInfo.IP == conn.IP.String() {
+			unsyncedProcessesIds = append(unsyncedProcessesIds, prc.Id)
 		}
 	}
 
-	for _, process := range updatedProcesses {
-		updatedProcessesIds = append(updatedProcessesIds, process.Id)
+	for _, process := range report {
+		syncedProcessesIds = append(syncedProcessesIds, process.Id)
 		process.remove = func() {
-			var rmReq RLSPRequest
+			var rmReq RLSPPacket
 			rmReq.Action = "removeProcess"
 			rmReq.RemoveProcessTarget = process.Id
 
@@ -111,29 +104,30 @@ func handleRlspProcessReport(updatedProcesses []process, rlsConn rlsConnection) 
 				rlog.Notify("Failed marshaling json.", "err")
 				return
 			}
-			latestWorkingCommit[process.Project.Name] = process.Hash
-			sendRlspRequest(string(ba), rlsConn)
-		}
-		process.RLSInfo.Type = "outsourced"
-		process.RLSInfo.IP = rlsConn.IP.String()
-		newProcesses = append(newProcesses, &process)
 
-		if !slices.Contains(oldOutsourcedProcesses, process.Id) {
+			latestWorkingCommit[process.Project.Name] = process.Hash
+			SendRawRLSPRequest(string(ba), conn)
+		}
+
+		process.RLSInfo.Type = "outsourced"
+		process.RLSInfo.IP = conn.IP.String()
+		syncedProcesses = append(syncedProcesses, &process)
+
+		if !slices.Contains(unsyncedProcessesIds, process.Id) {
 			go triggerEvent("newProcess", process)
 		}
 	}
 
 	for _, process := range processes {
-		if slices.Contains(updatedProcessesIds, process.Id) {
+		if slices.Contains(syncedProcessesIds, process.Id) {
 			continue
 		}
-
-		newProcesses = append(newProcesses, process)
+		syncedProcesses = append(syncedProcesses, process)
 	}
-	processes = newProcesses
+	processes = syncedProcesses
 }
 
-func rlspProcessReport(ip string) []process {
+func RLSPProcessReport(ip string) []process {
 	var involvedProcesses []process
 	for _, proc := range processes {
 		if proc.RLSInfo.Type == "adm" && proc.RLSInfo.IP == ip {
@@ -144,141 +138,110 @@ func rlspProcessReport(ip string) []process {
 	return involvedProcesses
 }
 
-func broadcastProcessReports() {
-	for _, rlsConn := range rlsConnections {
-		if rlsConn.Connection == nil {
-			var newProcesses []*process
-			for _, process := range processes {
-				if process.RLSInfo.IP == rlsConn.IP.String() {
-					process.State = "Lost RLS Connection"
-					process.Active = false
-					go triggerEvent("processError", *process)
-					go taskAutofix(*process)
-				}
-				newProcesses = append(newProcesses, process)
-			}
+func BroadcastAllProcessReports() {
+	for _, rlsConn := range Connections {
+		var packet RLSPPacket
+		packet.Action = "processReport"
+		packet.Processes = RLSPProcessReport(rlsConn.IP.String())
 
-			processes = newProcesses
-			continue
-		}
-
-		var req RLSPRequest
-		req.Action = "processReport"
-		req.Processes = rlspProcessReport(rlsConn.IP.String())
-
-		ba, err := json.Marshal(req)
+		ba, err := json.Marshal(packet)
 		if err != nil {
 			rlog.Notify("Failed marshaling json.", "err")
 			continue
 		}
 
-		response := sendRlspRequest(string(ba), rlsConn)
+		response, err := SendRawRLSPRequest(string(ba), rlsConn)
+		if err != nil {
+			for _, process := range processes {
+				if process.RLSInfo.IP != rlsConn.IP.String() {continue}
+
+				process.State = "Lost RLS Connection"
+				process.Active = false
+				go triggerEvent("processError", *process)
+				go taskAutofix(*process)
+			}
+		}
+
 		if string(response) != "alright" {
-			rlog.Notify("Helper server reported error updating processes administered by this server", "err")
+			rlog.Notify("Helper server reported error updating processes administered by this server: " + string(response), "err")
 		}
 	}
 }
 
-func getHelperServerConfigFromProcess(proc process) helperServer {
-	var foundRlsConn rlsConnection
-	for _, conn := range rlsConnections {
-		if conn.IP.Equal(net.ParseIP(proc.RLSInfo.IP)) {
-			foundRlsConn = conn
-			break
-		}
-	}
-
-	var foundHelperServer helperServer
-	for _, helperServer := range rconf.RLSConfig.Helpers {
-		if helperServer.Name == foundRlsConn.Name {
-			foundHelperServer = helperServer
-			break
-		}
-	}
-
-	return foundHelperServer
-}
-
-func getRlsWeightArray(processList []process) []process { //very shitty but very worky
-	var wa []process
-	for _, process := range processList {
-		weight := getHelperServerConfigFromProcess(process).Weight
-		if weight == 0 {
-			weight = 1
-		}
-
-		for range int(weight * 100) {
-			wa = append(wa, process)
-		}
-	}
-
-	return wa
-}
-
-func reloadRLSPProjects(rlsConn rlsConnection) {
+//outsourced processes get killed if the rls connection is lost
+func StartOutsourcedProjects(rlsConn rlsConnection) {
 	for _, project := range rconf.Projects {
 		if !slices.Contains(project.DeployOn, rlsConn.Name) {continue}
 		startProject(&project, "")
 	}
 }
 
-func broadcastProcessReportsLoop() { //run as new goroutine/async
+func MaintainProcessReportBroadcast() { //run as new goroutine/async
 	for {
-		go broadcastProcessReports()
+		go BroadcastAllProcessReports()
 		time.Sleep(5 * time.Second) //dont think this is too short since the connection is already open
 	}
 }
 
-func sendRlspRequest(body string, goal rlsConnection) []byte {
-	conn := *goal.Connection
-	reqId := getUuid()
-	rchan := make(chan []byte)
-	goal.ResponseChannels[reqId] = rchan
+func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
+	netConn, err := net.Dial("tcp", net.JoinHostPort(conn.IP.String(), "5076"))
+	if err != nil {
+		rlog.Notify("Error occured attempting to communicate with RLS Server: " + err.Error(), "err")
+		conn.Health.Healthy = false
+		return "", err
+	}
+	defer netConn.Close()
 
-	conn.Write([]byte("request:" + reqId + "|" + body + "\n"))
-	response := <- rchan
-	delete(goal.ResponseChannels, reqId)
+	_, err = netConn.Write([]byte("request:|" + rawBody + "\n"))
+	if err != nil {
+		rlog.Notify("Error occured writing to RLS Server: " + err.Error(), "err")
+		conn.Health.Healthy = false
+		return "", err
+	}
 
-	return response
+	rd := bufio.NewReader(netConn)
+	response, err := rd.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return response[:len(response) - 1], err
 }
 
-func sendRlspResponse(body string, goal rlsConnection, reqId string) {
-	conn := *goal.Connection
-	conn.Write([]byte("response:" + reqId + "|" + body + "\n"))
+func SendRawRLSPResponse(rawBody string, conn net.Conn) {
+	conn.Write([]byte(rawBody + "\n"))
 }
 
-func setupRlspProject(project *project, target string, hardCommit string) {
-	rlog.Println("Setting up project " + project.Name + " for RLS (outsourced to " + target + ")")
-	var rlsConn rlsConnection
-	for _, _rlsConn := range rlsConnections {
-		if _rlsConn.Name == target {
-			rlsConn = _rlsConn
+func setupRlspProject(project *project, targetName string, hardCommit string) {
+	rlog.Println("Setting up project " + project.Name + " for RLS (outsourced to " + targetName + ")")
+	var conn *rlsConnection
+	for _, c := range Connections {
+		if c.Name == targetName {
+			conn = c
 		}
 	}
 
-	if rlsConn.Connection == nil {
-		rlog.Notify("Couldn't deploy outsourced project, RLSP connection is not active.", "err")
-		triggerEvent("projectNoRlsError", *project)
-		return
-	}
-
-	ba, err := json.Marshal(RLSPRequest{
+	packet := RLSPPacket{
 		Action:  "startProject",
 		ProjectHardCommit: hardCommit,
 		Project: *project,
-	})
+	}
+
+	ba, err := json.Marshal(packet)
 	if err != nil {
-		rlog.Notify("Couldn't marshal json.", "err")
+		rlog.Notify("Couldn't marshal json for RLSP packet.", "err")
 		return
 	}
 
-	var updatedProcesses []process
-	jerr := json.Unmarshal(sendRlspRequest(string(ba), rlsConn), &updatedProcesses)
+	var report []process
+	rawReport, err := SendRawRLSPRequest(string(ba), conn)
+	if err != nil {return}
+
+	jerr := json.Unmarshal([]byte(rawReport), &report)
 	if jerr != nil {
-		rlog.Notify("Couldn't unmarshal json.", "err")
+		rlog.Notify("Couldn't unmarshal json for RLSP packet.", "err")
 		return
 	}
 
-	rlog.Notify("Process " + project.Name + " now running on " + target, "done")
-	handleRlspProcessReport(updatedProcesses, rlsConn)
+	rlog.Notify("Process " + project.Name + " now running on " + targetName, "done")
+	SyncToProcessReport(report, conn)
 }

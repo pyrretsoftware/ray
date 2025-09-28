@@ -6,7 +6,6 @@ import (
 	"errors"
 	"html"
 	"io"
-	"math"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -75,7 +74,7 @@ func startProxy() {
 				rlsIp := net.ParseIP(strings.Split(r.In.RemoteAddr, ":")[0])
 
 				fromHelperServer := false
-				for _, conn := range rlsConnections {
+				for _, conn := range Connections {
 					if conn.IP.Equal(rlsIp) {
 						fromHelperServer = true
 						break
@@ -244,30 +243,30 @@ func startProxy() {
 					ipSum += ipNum
 				}
 
-				weightArray := getRlsWeightArray(foundProcesses)
-				index := int(math.Floor(ipSum * float64(len(weightArray)) / 1020)) //the ip sum can be 0-1020
-				chosenServer := weightArray[index]
-
+				//experimental: new pick algo
+				weights := weightArray(foundProcesses)
+				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
+				
 				//default: local server over tcp
-				destUrl := "http://127.0.0.1:" + strconv.Itoa(chosenServer.Port)
+				destUrl := "http://127.0.0.1:" + strconv.Itoa(pick.Port)
 				destUds := ""
 
 				//local server over uds
-				if chosenServer.UnixSocketPath != "" {
+				if pick.UnixSocketPath != "" {
 					destUrl = "http://unix"
-					destUds = chosenServer.UnixSocketPath
+					destUds = pick.UnixSocketPath
 				}
 
 				//remote server over tcp (rls does not support udp when communicating between servers, and uds can only be used with rls at local server level, see above)
-				if chosenServer.RLSInfo.Type == "outsourced" {
-					destUrl = "http://" + chosenServer.RLSInfo.IP + ":80"
-					r.Out.Header.Add("x-rls-process", chosenServer.Id)
+				if pick.RLSInfo.Type == "outsourced" {
+					destUrl = "http://" + pick.RLSInfo.IP + ":80"
+					r.Out.Header.Add("x-rls-process", pick.Id)
 				}
 
 				//middleware over tcp
-				if chosenServer.Project.Middleware != "" {
+				if pick.Project.Middleware != "" {
 					r.Out.Header.Add("x-middleware-dest", destUrl)
-					destUrl = "http://" + chosenServer.Project.Middleware
+					destUrl = "http://" + pick.Project.Middleware
 				}
 				url, err := url.Parse(destUrl)
 				if err != nil {
@@ -297,9 +296,11 @@ func startProxy() {
 		},
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				rlog.Debug("we be dialing fr " + addr)
 				udsp := ctx.Value(rayUnixSocketPath)
 				if udsp == nil {
-					return nil, errors.New("could not get transport: ")
+					//likely rls causing this not to be set
+					return net.Dial("tcp", addr)
 				} else if _, ok := udsp.(string); !ok {
 					return nil, errors.New("transport is not string")
 				}

@@ -475,7 +475,7 @@ func SetupEnv() {
 		startProject(&project, "")
 	}
 
-	RLSinitalConnectionOver = true
+	RLSinitialConnectionOver = true
 	validateConfig(*rconf)
 	go startUpdateCheck()
 }
