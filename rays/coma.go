@@ -118,11 +118,10 @@ func rayReload(permissons []string) ComError {
 		config := readConfig()
 		rconf = &config
 		
+		UpdateConnections()
 		for _, project := range rconf.Projects {
 			startProject(&project, "")
 		}
-
-		UpdateConnections()
 		return Success 
 	}
 	return NotPermitted

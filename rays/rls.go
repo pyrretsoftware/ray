@@ -95,6 +95,7 @@ func HandleRLSServerConnection(netConn net.Conn) {
 //expiremental: hot reload rls connections
 func UpdateConnections() {
 	localIps := getIps()
+	var newConnections []*rlsConnection
 	for _, helperServer := range rconf.RLSConfig.Helpers {
 		var rlsConn rlsConnection
 		rlsConn.Name = helperServer.Name
@@ -112,8 +113,10 @@ func UpdateConnections() {
 			continue
 		}
 
-		Connections = append(Connections, &rlsConn)
+		newConnections = append(newConnections, &rlsConn)
 	}
+
+	Connections = newConnections
 }
 
 func InitializeRls() {
