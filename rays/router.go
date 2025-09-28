@@ -246,7 +246,10 @@ func startProxy() {
 				//experimental: new pick algo
 				weights := weightArray(foundProcesses)
 				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
-
+				
+				pick = foundProcesses[0]
+				rlog.Debug("overwrote pick to ")
+				rlog.Debug(pick.Id)
 				//default: local server over tcp
 				destUrl := "http://127.0.0.1:" + strconv.Itoa(pick.Port)
 				destUds := ""
@@ -296,9 +299,11 @@ func startProxy() {
 		},
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				rlog.Debug("we be dialing fr " + addr)
 				udsp := ctx.Value(rayUnixSocketPath)
 				if udsp == nil {
-					return nil, errors.New("could not get transport: ")
+					//likely rls causing this not to be set
+					return net.Dial("tcp", addr)
 				} else if _, ok := udsp.(string); !ok {
 					return nil, errors.New("transport is not string")
 				}
