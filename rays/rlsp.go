@@ -220,6 +220,11 @@ func setupRlspProject(project *project, targetName string, hardCommit string) {
 		}
 	}
 
+	if conn == nil {
+		rlog.Notify("Cant deploy on '" + targetName + "', it does not exist.", "err")
+		return
+	}
+
 	packet := RLSPPacket{
 		Action:  "startProject",
 		ProjectHardCommit: hardCommit,
