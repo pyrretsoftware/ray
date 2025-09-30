@@ -122,6 +122,10 @@ func rayReload(permissons []string) ComError {
 		for _, project := range rconf.Projects {
 			startProject(&project, "")
 		}
+		go func ()  {
+			time.Sleep(100 * time.Millisecond) //wait a little to have the current comline request succeed.
+			LoadLines(*rconf)
+		}()
 		return Success 
 	}
 	return NotPermitted
