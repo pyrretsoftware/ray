@@ -6,9 +6,9 @@
 <p align="center">
     <i>easily self-host your stuff</i>
     <br>
-    <a href="https://docs.ray.pyrret.com/guides/install">Installation guide</a>
+    <a href="https://ray.pyrret.com/guides/installation">Installation guide</a>
     <span> | </span>
-    <a href="https://docs.ray.pyrret.com/">Docs</a>
+    <a href="https://ray.pyrret.com/docs">Docs</a>
     <span> | </span>
     <a href="https://github.com/pyrretsoftware/ray/releases">Latest release</a>
     <span> | </span>
