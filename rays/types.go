@@ -9,6 +9,7 @@ type deployment struct {
 	Branch string
 	Type string
 	Enrollment float64
+	OCISrc string `json:"OCISrc,omitempty"`
 }
 
 type project struct {
@@ -17,7 +18,8 @@ type project struct {
 	EnvVars map[string]string `json:"EnvVars,omitempty"`
 	Domain string
 	Deployments []deployment `json:"Deployments,omitempty"`
-	ProdTypeIsDev bool `json:"ProdTypeIsDev,omitempty"`
+	ProdType string `json:"ProdType,omitempty"`
+	ProdOCISrc string `json:"ProdOCISrc,omitempty"`
 	PluginImplementation string `json:"PluginImplementation,omitempty"`
 	Options map[string]string `json:"Options,omitempty"`
 	DeployOn []string 
@@ -36,6 +38,8 @@ type raydata struct {
 
 type tlsConfig struct {
 	Provider string `json:"Provider,omitempty"` //enum, possile vals are "letsencrypt" and "custom". 
+	Certificate string //only used when provider is custom, in PEM format
+	PrivateKey string //only used when provider is custom, in PEM format
 }
 
 type gitAuth struct {
