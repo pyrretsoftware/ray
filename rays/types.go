@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"strings"
 	"time"
 )
 
@@ -183,6 +184,8 @@ type process struct {
 	Hash string
 	LogFile string
 	Id string
+	log *strings.Builder
+	BuildLog []byte
 	RLSInfo rlsInfo
 }
 type logFile struct {

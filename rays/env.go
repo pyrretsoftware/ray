@@ -133,22 +133,24 @@ func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pi
 	})
 }
 
-func finishProcess(logFile logFile, process process, project project, branch string, logPath string) {
+func finishProcess(logFile logFile, process *process, project project, branch string, logPath string) {
 	logFile.Name = project.Name + " (branch " + branch + ")"
 	if (process.Active && process.State == "OK") {
 		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
 		logFile.Success = true
-		go triggerEvent("newProcess", process)
+		go triggerEvent("newProcess", *process)
 	} else {
 		rlog.Notify(project.Name + ", branch " + branch + " was not successfully deployed!", "err")
 		logFile.Success = false
-		go triggerEvent("processError", process)
-		go taskAutofix(process)
+		go triggerEvent("processError", *process)
+		go taskAutofix(*process)
 	}
+
 	logB, err := json.MarshalIndent(logFile, "", "    ")
 	if err != nil {
 		rlog.Println("Failed encoding log file.")
 	} else {
+		process.BuildLog = logB
 		err := os.WriteFile(logPath, logB, 0600)
 		rerr.Notify("Failed writing log file.", err)
 	}
@@ -208,7 +210,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	if !stepZeroSuccess {
 		process.Active = false
 		process.State = stepZeroLogBuffer.String()
-		finishProcess(logFile, process, *project, branch, logPath)
+		finishProcess(logFile, &process, *project, branch, logPath)
 		processes = append(processes, &process)
 		return
 	}
@@ -327,6 +329,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
 				process.Processes = append(process.Processes, cmd.Process.Pid)
+				process.log = &logBuffer
 				go trackProcess(cmd, &process, &logBuffer)
 
 				if (config.NotWebsite) {break}
@@ -337,7 +340,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		}
 	}
 
-	finishProcess(logFile, process, *project, branch, logPath)
+	finishProcess(logFile, &process, *project, branch, logPath)
 	processes = append(processes, &process)
 }
 
