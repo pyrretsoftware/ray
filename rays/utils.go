@@ -36,7 +36,7 @@ func makeGhost(process *process) {
 	process.Ghost = true
 	process.Active = false
 	process.State = "drop"
-	if process.Hash != "" { //hash is only unset for oci processes
+	if process.Hash != "" { //hash is only unset for docker processes
 		latestWorkingCommit[process.Project.Name] = process.Hash
 	}
 	os.RemoveAll(process.Env)

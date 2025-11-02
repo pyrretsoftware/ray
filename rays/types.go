@@ -10,7 +10,7 @@ type deployment struct {
 	Branch string
 	Type string
 	Enrollment float64
-	OCISrc string `json:"OCISrc,omitempty"`
+	DockerSrc string `json:"DockerSrc,omitempty"`
 }
 
 type project struct {
@@ -20,7 +20,7 @@ type project struct {
 	Domain string
 	Deployments []deployment `json:"Deployments,omitempty"`
 	ProdType string `json:"ProdType,omitempty"`
-	ProdOCISrc string `json:"ProdOCISrc,omitempty"`
+	ProdDockerSrc string `json:"ProdDockerSrc,omitempty"`
 	PluginImplementation string `json:"PluginImplementation,omitempty"`
 	Options map[string]string `json:"Options,omitempty"`
 	DeployOn []string 

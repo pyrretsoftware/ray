@@ -365,7 +365,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 	deployments = append(deployments, deployment{
 		Type: "prod",
 		Branch: "prod",
-		OCISrc: project.ProdOCISrc,
+		DockerSrc: project.ProdDockerSrc,
 	})
 
 	branchHashes := getBranches(project.Src)
@@ -376,7 +376,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		dir := filepath.Join(rdata.RayEnv, procId)
 		os.Mkdir(dir, 0600)
 
-		if deployment.OCISrc == "" {
+		if deployment.DockerSrc == "" {
 			_cmd := []string{"clone", project.Src}
 			if (deployment.Type != "prod") {
 				_cmd = append(_cmd, "-b")

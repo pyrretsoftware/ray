@@ -105,7 +105,7 @@ func SyncToProcessReport(report []process, conn *rlsConnection) {
 				return
 			}
 
-			if process.Hash != "" { //hash is only unset for oci processes
+			if process.Hash != "" { //hash is only unset for docker processes
 				latestWorkingCommit[process.Project.Name] = process.Hash
 			}
 			SendRawRLSPRequest(string(ba), conn)
