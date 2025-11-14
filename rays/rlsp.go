@@ -105,7 +105,9 @@ func SyncToProcessReport(report []process, conn *rlsConnection) {
 				return
 			}
 
-			latestWorkingCommit[process.Project.Name] = process.Hash
+			if process.Hash != "" { //hash is only unset for oci processes
+				latestWorkingCommit[process.Project.Name] = process.Hash
+			}
 			SendRawRLSPRequest(string(ba), conn)
 		}
 

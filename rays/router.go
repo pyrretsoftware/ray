@@ -53,14 +53,12 @@ func startHttpServer(srv *http.Server) {
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
-	certFile := dotslash + "/ray-certs/server.crt"
-	keyFile := dotslash + "/ray-certs/server.key"
 	if rconf.TLS.Provider == "letsencrypt" {
 		srv.TLSConfig = letsEncryptConfig(hosts)
-		certFile = ""
-		keyFile = ""
+	} else {
+		srv.TLSConfig = customCertificateConfig(rconf.TLS.Certificate, rconf.TLS.PrivateKey)
 	}
-	err := srv.ListenAndServeTLS(certFile, keyFile)
+	err := srv.ListenAndServeTLS("", "")
 
 	rerr.Notify("Failed listenting with https: ", err, true)
 }
@@ -152,7 +150,9 @@ func startProxy() {
 
 				if chnl == "" {
 					chnl = "prod"
-					requiresAuth = requestProject.ProdTypeIsDev
+					if requestProject.ProdType == "dev" {
+						requiresAuth = true
+					}
 				}
 				ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
 				r.Out = r.Out.WithContext(ctx)
@@ -176,7 +176,9 @@ func startProxy() {
 						r.Out.Header.Del("If-Modified-Since")
 					}
 					chnl = "prod"
-					requiresAuth = requestProject.ProdTypeIsDev
+					if requestProject.ProdType == "dev" {
+						requiresAuth = true
+					}
 				}
 			}
 
