@@ -29,6 +29,7 @@ const (
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "HostNotFound",
 	` connection refused`:            "ProcessOffline",
+	`EOF`:                            "ProcessEOF",                
 }
 
 func parseEnrollmentCookie(forcedRenrollment int64, cookie *http.Cookie, cerr error) bool {
@@ -383,11 +384,13 @@ func startProxy() {
 					errorContent = getV2ErrorPage("working", "working", "nonexistant", "cantResolve", "host not found")
 				case "ProcessOffline":
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "process can be resolved but is refusing connection.")
+				case "ProcessEOF":
+					errorContent = getV2ErrorPage("working", "working", "failed", "processError", "process closed connection unexpectedly.")
 				case "":
 					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
-					if err.Error() != "context canceled" {
+					if errorCode != "context canceled" {
 						rlog.Notify("Unknown ray router error: ", "err")
-						rlog.Notify(err, "err")
+						rlog.Notify(errorCode, "err")
 					}
 				}
 			}

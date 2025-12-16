@@ -51,6 +51,7 @@ func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 		ports = getProcessPorts(process.Processes[0])
 		occupied = portUsed(process.Port)
 		
+		if udspath == "DOCKER" {continue}
 		if _, err := os.Stat(udspath); err == nil {
 			process.UnixSocketPath = udspath
 			rlog.Notify("Process has created a unix socket, now using UDS for this process.", "done")
@@ -62,7 +63,7 @@ func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 		rlog.Notify("The application has not yet started listening for connections on any port, even after waiting 50 seconds, Terminating...", "warn")
 		process.remove()
 		return
-	} else if len(ports) == 0 {
+	} else if len(ports) == 0 && udspath != "DOCKER" {
 		//TODO: test this
 		rlog.Notify("The instructed port is occupied, but not by the same process as the deploy step. This can happen if the deploy step spawns new processes.", "warn")
 		if lenientPorts {
@@ -365,7 +366,6 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 	deployments = append(deployments, deployment{
 		Type: "prod",
 		Branch: "prod",
-		DockerSrc: project.ProdDockerSrc,
 	})
 
 	branchHashes := getBranches(project.Src)
@@ -376,7 +376,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		dir := filepath.Join(rdata.RayEnv, procId)
 		os.Mkdir(dir, 0600)
 
-		if deployment.DockerSrc == "" {
+		if strings.ToLower(project.CompatabilityMode) != "docker"  {
 			_cmd := []string{"clone", project.Src}
 			if (deployment.Type != "prod") {
 				_cmd = append(_cmd, "-b")
@@ -426,6 +426,8 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		} else {
 			os.Mkdir(path.Join(dir, "logs"), 0600)
 			//todo: implement
+
+			go deployLocalDockerProcess(project, &rm, deployment.Branch, "N/A", path.Join(dir, "logs"), dir, procId, host)
 		}
 	}
 

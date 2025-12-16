@@ -10,9 +10,12 @@ type deployment struct {
 	Branch string
 	Type string
 	Enrollment float64
-	DockerSrc string `json:"DockerSrc,omitempty"`
 }
 
+type DockerOptions struct {
+	NotWebsite bool
+	ContainerPort int
+}
 type project struct {
 	Src string
 	Name string
@@ -20,7 +23,8 @@ type project struct {
 	Domain string
 	Deployments []deployment `json:"Deployments,omitempty"`
 	ProdType string `json:"ProdType,omitempty"`
-	ProdDockerSrc string `json:"ProdDockerSrc,omitempty"`
+	CompatabilityMode string `json:"CompatabilityMode,omitempty"`
+	DockerOptions DockerOptions
 	PluginImplementation string `json:"PluginImplementation,omitempty"`
 	Options map[string]string `json:"Options,omitempty"`
 	DeployOn []string 
