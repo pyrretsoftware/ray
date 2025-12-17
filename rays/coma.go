@@ -145,9 +145,41 @@ func raySystemctlRestart(permissons []string) ComError {
 }
 func extensionsRead(permissons []string) (map[string]Extension, ComError) {
 	if permOk(permissons, "extensions:read", "extensions:all", "special:all", "special:ext") {
-		return extensions, ""
+		return extensions, Success
 	}
 	return map[string]Extension{}, NotPermitted
+}
+func readProcessLog(permissons []string, id string) ([]byte, ComError) {
+	if permOk(permissons, "process:logs", "process:all", "special:all", "special:ext") {
+		var process *process
+		for _, proc := range processes {
+			if proc.Id == id {
+				process = proc
+			}
+		}
+
+		if process == nil {
+			return []byte(""), "process not found"
+		}
+		return []byte(process.log.String()), Success
+	}
+	return []byte(""), NotPermitted
+}
+func readProcessBuildLog(permissons []string, id string) ([]byte, ComError) {
+	if permOk(permissons, "process:logs", "process:all", "special:all", "special:ext") {
+		var process *process
+		for _, proc := range processes {
+			if proc.Id == id {
+				process = proc
+			}
+		}
+
+		if process == nil {
+			return []byte(""), "process not found"
+		}
+		return process.BuildLog, Success
+	}
+	return []byte(""), NotPermitted
 }
 
 func HandleRequest(r comRequest, l ComLine) comResponse {
@@ -219,6 +251,22 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 		pl, err := processesGet(comKey.Permissions)
 		response.Error = ComErrorString(err)
 		response.Payload = pl
+	case "process:log":
+		if rpl["process"] == "" {
+			response.Error = ComErrorString(TypeError)
+		} else {
+			pl, err := readProcessLog(comKey.Permissions, rpl["process"])
+			response.Error = ComErrorString(err)
+			response.Payload = pl
+		}
+	case "process:build_log":
+		if rpl["process"] == "" {
+			response.Error = ComErrorString(TypeError)
+		} else {
+			pl, err := readProcessBuildLog(comKey.Permissions, rpl["process"])
+			response.Error = ComErrorString(err)
+			response.Payload = pl
+		}
 	case "router:register":
 		if rpl["route"] == "" || rpl["dest"] == "" {
 			response.Error = ComErrorString(TypeError)

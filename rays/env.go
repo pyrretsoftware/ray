@@ -51,6 +51,7 @@ func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 		ports = getProcessPorts(process.Processes[0])
 		occupied = portUsed(process.Port)
 		
+		if udspath == "DOCKER" {continue}
 		if _, err := os.Stat(udspath); err == nil {
 			process.UnixSocketPath = udspath
 			rlog.Notify("Process has created a unix socket, now using UDS for this process.", "done")
@@ -62,7 +63,7 @@ func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 		rlog.Notify("The application has not yet started listening for connections on any port, even after waiting 50 seconds, Terminating...", "warn")
 		process.remove()
 		return
-	} else if len(ports) == 0 {
+	} else if len(ports) == 0 && udspath != "DOCKER" {
 		//TODO: test this
 		rlog.Notify("The instructed port is occupied, but not by the same process as the deploy step. This can happen if the deploy step spawns new processes.", "warn")
 		if lenientPorts {
@@ -108,7 +109,7 @@ func updateProjects(updateRollbacks bool) {//we wont print anything if no update
 			process := getProcessFromBranch(deployment.Branch, project)
 			if (process == nil) {continue}
 
-			//if we're rolled back and not on the faulty version
+			//if we're rolled back and the newest version is the faulty version
 			if strings.HasPrefix(process.Hash, "rollback:") && strings.Replace(process.Hash, "rollback:", "", 1) == branches[deployment.Branch] && !updateRollbacks {
 				continue
 			}
@@ -133,22 +134,24 @@ func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pi
 	})
 }
 
-func finishProcess(logFile logFile, process process, project project, branch string, logPath string) {
+func finishProcess(logFile logFile, process *process, project project, branch string, logPath string) {
 	logFile.Name = project.Name + " (branch " + branch + ")"
 	if (process.Active && process.State == "OK") {
 		rlog.Notify(project.Name + ", branch " + branch + " was sucessfully deployed!", "done")
 		logFile.Success = true
-		go triggerEvent("newProcess", process)
+		go triggerEvent("newProcess", *process)
 	} else {
-		rlog.Notify(project.Name + ", branch " + branch + " was not sucessfully deployed!", "err")
+		rlog.Notify(project.Name + ", branch " + branch + " was not successfully deployed!", "err")
 		logFile.Success = false
-		go triggerEvent("processError", process)
-		go taskAutofix(process)
+		go triggerEvent("processError", *process)
+		go taskAutofix(*process)
 	}
+
 	logB, err := json.MarshalIndent(logFile, "", "    ")
 	if err != nil {
 		rlog.Println("Failed encoding log file.")
 	} else {
+		process.BuildLog = logB
 		err := os.WriteFile(logPath, logB, 0600)
 		rerr.Notify("Failed writing log file.", err)
 	}
@@ -208,7 +211,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	if !stepZeroSuccess {
 		process.Active = false
 		process.State = stepZeroLogBuffer.String()
-		finishProcess(logFile, process, *project, branch, logPath)
+		finishProcess(logFile, &process, *project, branch, logPath)
 		processes = append(processes, &process)
 		return
 	}
@@ -275,7 +278,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		}
 		cmd.Env = append(cmd.Env, "RAY_DEPLOYMENT=" + process.Branch)
 
-		if (step.Type == "deploy") {
+		if step.Type == "deploy" {
 			(*swapfunction)()
 		}
 
@@ -327,6 +330,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			rlog.BuildNotify("Completed step " + strconv.Itoa((stepIndex + 1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex + 1)) / float32(len(config.Pipeline))) * 100)) + "%) (" + step.Type + ", deployment " + branch +")", "done") 
 			if step.Type == "deploy" {
 				process.Processes = append(process.Processes, cmd.Process.Pid)
+				process.log = &logBuffer
 				go trackProcess(cmd, &process, &logBuffer)
 
 				if (config.NotWebsite) {break}
@@ -337,7 +341,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 		}
 	}
 
-	finishProcess(logFile, process, *project, branch, logPath)
+	finishProcess(logFile, &process, *project, branch, logPath)
 	processes = append(processes, &process)
 }
 
@@ -348,6 +352,13 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 	for _, prc := range processes {
 		if (prc.Project.Name == project.Name && !prc.Ghost && prc.RLSInfo.IP == host) {
 			oldprocesses = append(oldprocesses, prc)
+		}
+	}
+	rm := func() {
+		for _, proc := range oldprocesses {
+			if (!proc.Ghost) {
+				proc.remove()
+			}
 		}
 	}
 
@@ -365,60 +376,59 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		dir := filepath.Join(rdata.RayEnv, procId)
 		os.Mkdir(dir, 0600)
 
-		_cmd := []string{"clone", project.Src}
-		if (deployment.Type != "prod") {
-			_cmd = append(_cmd, "-b")
-			_cmd = append(_cmd, deployment.Branch)
-		}
-		
-		gitOutput := strings.Builder{}
-		cmd := exec.Command("git", _cmd...)
-		cmd.Dir = dir
-		cmd.Stdout = &gitOutput
-		cmd.Stderr = &gitOutput
-		
-		if err := cmd.Run(); err != nil {
-			rlog.Println(_cmd)
-			rlog.Println(gitOutput.String())
-			rlog.Notify("Git cloning error: " + err.Error(), "err")
-			continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
-		}
-	
-		content, err := os.ReadDir(dir)
-		if err != nil {
-			rlog.Fatal(err)
-		}
-
-		if hardCommit != "" {
-			cmd := exec.Command("git", "reset", "--hard", hardCommit)
-			cmd.Dir = path.Join(dir, content[0].Name())
+		if strings.ToLower(project.CompatabilityMode) != "docker"  {
+			_cmd := []string{"clone", project.Src}
+			if (deployment.Type != "prod") {
+				_cmd = append(_cmd, "-b")
+				_cmd = append(_cmd, deployment.Branch)
+			}
+			
+			gitOutput := strings.Builder{}
+			cmd := exec.Command("git", _cmd...)
+			cmd.Dir = dir
+			cmd.Stdout = &gitOutput
+			cmd.Stderr = &gitOutput
+			
 			if err := cmd.Run(); err != nil {
-				rlog.Println(cmd.Args)
-				rlog.Notify("Git hard commit resetting error: " + err.Error(), "err")
+				rlog.Println(_cmd)
+				rlog.Println(gitOutput.String())
+				rlog.Notify("Git cloning error: " + err.Error(), "err")
 				continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
 			}
-		}
+		
+			content, err := os.ReadDir(dir)
+			if err != nil {
+				rlog.Fatal(err)
+			}
 
-		os.Mkdir(path.Join(dir, "logs"), 0600)//Making sure to do this after we've cloned the repo
-	
-		projectConfig := filepath.Join(dir, content[0].Name(), "ray.config.json") //the existance of this file is checked later dw
-		rm := func() {
-			for _, proc := range oldprocesses {
-				if (!proc.Ghost) {
-					proc.remove()
+			if hardCommit != "" {
+				cmd := exec.Command("git", "reset", "--hard", hardCommit)
+				cmd.Dir = path.Join(dir, content[0].Name())
+				if err := cmd.Run(); err != nil {
+					rlog.Println(cmd.Args)
+					rlog.Notify("Git hard commit resetting error: " + err.Error(), "err")
+					continue //this wont fire any monitoring stuff and just silently fail (with the exception of the above log), could def be improved
 				}
 			}
-		}
-	
-		branch := deployment.Branch
+			os.Mkdir(path.Join(dir, "logs"), 0600) //Making sure to do this after we've cloned the repo and called ReadDir
 
-		branchHash := ""
-		if hardCommit != "" {
-			branchHash = "rollback:" + branchHashes[branch] //the faulty version
-		} else if (branchHashes != nil && branchHashes[branch] != "") {
-			branchHash = branchHashes[branch]
+			projectConfig := filepath.Join(dir, content[0].Name(), "ray.config.json") //the existance of this file is checked later dw
+			branch := deployment.Branch
+			branchHash := ""
+
+			if hardCommit != "" {
+				branchHash = "rollback:" + branchHashes[branch] //the faulty version
+			} else if (branchHashes != nil && branchHashes[branch] != "") {
+				branchHash = branchHashes[branch]
+			}
+
+			go deployLocalProcess(projectConfig, filepath.Join(dir, content[0].Name()), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
+		} else {
+			os.Mkdir(path.Join(dir, "logs"), 0600)
+			//todo: implement
+
+			go deployLocalDockerProcess(project, &rm, deployment.Branch, "N/A", path.Join(dir, "logs"), dir, procId, host)
 		}
-		go deployLocalProcess(projectConfig, filepath.Join(dir, content[0].Name()), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
 	}
 
 	var newProcesses []process

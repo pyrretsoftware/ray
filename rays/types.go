@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"strings"
 	"time"
 )
 
@@ -11,13 +12,19 @@ type deployment struct {
 	Enrollment float64
 }
 
+type DockerOptions struct {
+	NotWebsite bool
+	ContainerPort int
+}
 type project struct {
 	Src string
 	Name string
 	EnvVars map[string]string `json:"EnvVars,omitempty"`
 	Domain string
 	Deployments []deployment `json:"Deployments,omitempty"`
-	ProdTypeIsDev bool `json:"ProdTypeIsDev,omitempty"`
+	ProdType string `json:"ProdType,omitempty"`
+	CompatabilityMode string `json:"CompatabilityMode,omitempty"`
+	DockerOptions DockerOptions
 	PluginImplementation string `json:"PluginImplementation,omitempty"`
 	Options map[string]string `json:"Options,omitempty"`
 	DeployOn []string 
@@ -36,6 +43,8 @@ type raydata struct {
 
 type tlsConfig struct {
 	Provider string `json:"Provider,omitempty"` //enum, possile vals are "letsencrypt" and "custom". 
+	Certificate string //only used when provider is custom, in PEM format
+	PrivateKey string //only used when provider is custom, in PEM format
 }
 
 type gitAuth struct {
@@ -179,6 +188,8 @@ type process struct {
 	Hash string
 	LogFile string
 	Id string
+	log *strings.Builder
+	BuildLog []byte
 	RLSInfo rlsInfo
 }
 type logFile struct {

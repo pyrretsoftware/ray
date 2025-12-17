@@ -29,6 +29,7 @@ const (
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "HostNotFound",
 	` connection refused`:            "ProcessOffline",
+	`EOF`:                            "ProcessEOF",                
 }
 
 func parseEnrollmentCookie(forcedRenrollment int64, cookie *http.Cookie, cerr error) bool {
@@ -53,14 +54,12 @@ func startHttpServer(srv *http.Server) {
 }
 
 func startHttpsServer(srv *http.Server, hosts []string) {
-	certFile := dotslash + "/ray-certs/server.crt"
-	keyFile := dotslash + "/ray-certs/server.key"
 	if rconf.TLS.Provider == "letsencrypt" {
 		srv.TLSConfig = letsEncryptConfig(hosts)
-		certFile = ""
-		keyFile = ""
+	} else {
+		srv.TLSConfig = customCertificateConfig(rconf.TLS.Certificate, rconf.TLS.PrivateKey)
 	}
-	err := srv.ListenAndServeTLS(certFile, keyFile)
+	err := srv.ListenAndServeTLS("", "")
 
 	rerr.Notify("Failed listenting with https: ", err, true)
 }
@@ -152,7 +151,9 @@ func startProxy() {
 
 				if chnl == "" {
 					chnl = "prod"
-					requiresAuth = requestProject.ProdTypeIsDev
+					if requestProject.ProdType == "dev" {
+						requiresAuth = true
+					}
 				}
 				ctx := context.WithValue(r.Out.Context(), rayChannelKey, chnl)
 				r.Out = r.Out.WithContext(ctx)
@@ -176,7 +177,9 @@ func startProxy() {
 						r.Out.Header.Del("If-Modified-Since")
 					}
 					chnl = "prod"
-					requiresAuth = requestProject.ProdTypeIsDev
+					if requestProject.ProdType == "dev" {
+						requiresAuth = true
+					}
 				}
 			}
 
@@ -381,11 +384,13 @@ func startProxy() {
 					errorContent = getV2ErrorPage("working", "working", "nonexistant", "cantResolve", "host not found")
 				case "ProcessOffline":
 					errorContent = getV2ErrorPage("working", "working", "offline", "processError", "process can be resolved but is refusing connection.")
+				case "ProcessEOF":
+					errorContent = getV2ErrorPage("working", "working", "failed", "processError", "process closed connection unexpectedly.")
 				case "":
 					errorContent = getV2ErrorPage("working", "failed", "working", "unknownError", "ray router's errorHandler was called but the error is not known.")
-					if err.Error() != "context canceled" {
+					if errorCode != "context canceled" {
 						rlog.Notify("Unknown ray router error: ", "err")
-						rlog.Notify(err, "err")
+						rlog.Notify(errorCode, "err")
 					}
 				}
 			}
