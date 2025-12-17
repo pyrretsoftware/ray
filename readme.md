@@ -28,8 +28,3 @@ These are bugs that are known to be in the current release, most of them fixed a
 * Inproperly defined rayserve redirects causes panic instead of being handled properly
 * Panic can be triggered by attempting to kill nonexistant processes
 * Build continues even after a step has failed
-
-# components
-- rays - ray server (the software running on the server)
-- rray - remote ray (tool to help you easily connect to and manage remote ray servers)
-- rayinstall - ray installer (utility to help with installing)
