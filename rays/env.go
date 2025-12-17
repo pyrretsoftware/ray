@@ -92,6 +92,9 @@ func startUpdateCheck() {
 
 func updateProjects(updateRollbacks bool) {//we wont print anything if no updates are found, as to not fill up log files
 	for _, project := range rconf.Projects {
+		if strings.ToLower(project.CompatabilityMode) == "docker" {
+			continue
+		}
 		branches := getBranches(project.Src)
 		doUpdate := false
 
