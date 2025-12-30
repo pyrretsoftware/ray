@@ -8,7 +8,7 @@
     <br>
     <a href="https://ray.pyrret.com/guides/installation">Installation guide</a>
     <span> | </span>
-    <a href="https://ray.pyrret.com/docs">Docs</a>
+    <a href="https://ray.pyrret.com/docs.html">Docs</a>
     <span> | </span>
     <a href="https://github.com/pyrretsoftware/ray/releases">Latest release</a>
     <span> | </span>
