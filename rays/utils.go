@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	"io"
 	"math/rand/v2"
 	"net"
 	"os"
@@ -42,24 +41,6 @@ func makeGhost(process *process) {
 	os.RemoveAll(process.Env)
 }
 
-type ReadWaiter struct {
-	w io.Writer
-	close chan bool
-}
-
-func (w ReadWaiter) Write(p []byte) (n int, err error) {
-	return w.w.Write(p)
-}
-
-func (w ReadWaiter) Close() (err error) {
-	w.close <- true
-	return 
-}
-
-func (w ReadWaiter) YieldClose() {
-	<- w.close
-}
-
 func pickPort() int {
 	port := rand.IntN(16383) + 49152
 
@@ -89,6 +70,13 @@ func assignDotSlash() {
 	rerr.Fatal("Cant get current executable: ", err, true)
 
 	dotslash = path.Join(filepath.Dir(exc), "ray-env")
+}
+
+func AbsPath(path string) string {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
+	return filepath.Clean(filepath.Join(dotslash, path))
 }
 
 func getProcessFromBranch(branch string, project project) *process {

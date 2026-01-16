@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -10,11 +11,23 @@ import (
 
 var Version = "1.0.0"
 func about(context.Context, *cli.Command) error {
-	fmt.Println(greenBold.Render("rayc"), "is a cli-based ray comline client, it is the offical/recommended way to manage ray servers with comlines.\nIt can talk with comlines that use", greenBold.Render("UDS (Unix domain sockets)"), "and", greenBold.Render("HTTP") + ".")
+	fmt.Println(greenBold.Render("rayc"), "is a cli-based ray comline client, it is the offical/recommended way to manage ray servers with comlines.\nIt can talk to comlines using", greenBold.Render("UDS (Unix domain sockets)"), "or", greenBold.Render("HTTP") + ".")
 	fmt.Println("By default, rayc will attempt to connect to a local UDS comline on this machine. You can use the", greenBold.Render("-r flag"), "to specify a remote HTTP comline to use.")
 	fmt.Println()
 	fmt.Println("Running rayc version", greenBold.Render(Version))
 	return nil
+}
+
+func isBadFormat(ok bool) {
+	if !ok {
+		fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
+		os.Exit(1)
+	}
+}
+
+func badFormat() error {
+	fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
+	return errors.New("comline request returned unknown format")
 }
 
 func main() {
@@ -34,12 +47,42 @@ func main() {
 				Usage: "a hardcoded key to use for remote comlines",
 				Aliases: []string{"hk"},
 			},
+			&cli.BoolFlag{
+				Name: "debug-local-rays",
+				Value: false,
+				Usage: "for debugging use, do not use!",
+			},
 		},
 		Commands: []*cli.Command{
 			{
 				Name: "about",
 				Usage: "returns information about rayc",
 				Action: about,
+			},
+			{
+				Name: "logs",
+				Usage: "allows you to view process logs of processes",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "process",
+						Value: "",
+						Usage: "the id of the process you would like to view",
+					},
+				},
+				Action: logs,
+			},
+			{
+				Name: "build-logs",
+				Usage: "allows you to view build logs of processes",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "process",
+						Value: "",
+						Usage: "the id of the process you would like to view",
+					},
+				},
+				Aliases: []string{"blogs", "buildlogs"},
+				Action: logs,
 			},
 			{
 				Name: "reenroll",
@@ -57,13 +100,6 @@ func main() {
 			{
 				Name: "config",
 				Usage: "edit the config",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name: "project",
-						Value: "",
-						Usage: "",
-					},
-				},
 				Action: config,
 			},
 			{
@@ -78,7 +114,7 @@ func main() {
 			},
 			{
 				Name: "update",
-				Usage: "manually checks for updates on all projects, and updates those that are out dated.",
+				Usage: "manually checks for updates on all projects, and updates those that are outdated.",
 				Description: "This is automatically done every minute, though using this command also updates rolled-backed processes.",
 				Action: update,
 			},

@@ -77,7 +77,7 @@ func installPack(raysBin []byte) {
 
 var systemdService string = `[Unit]
 Description=ray server (rays)
-After=network.target
+After=network-online.target
 
 [Service]
 User=${User}

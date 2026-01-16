@@ -14,20 +14,20 @@ func getBranches(repo string) map[string]string { //returns map with branch:hash
 		rlog.Notify("Failed to create HTTP request for " + repo + ".", "warn")
 		return nil
 	}
-	if (rconf.GitAuth.Username != "" || rconf.GitAuth.Password != "") {
+	if rconf.GitAuth.Username != "" || rconf.GitAuth.Password != "" {
 		req.SetBasicAuth(rconf.GitAuth.Username, rconf.GitAuth.Password)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if (err != nil) {
+	if err != nil {
 		rlog.Notify("Could not fetch repository information for " + repo + ".", "warn")
 		return nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if (err != nil) {
+	if err != nil {
 		rlog.Notify("Failed reading response body when fetching repo information for " + repo + ".", "warn")
 		return nil
 	}

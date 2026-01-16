@@ -15,7 +15,7 @@ func config(cc context.Context, cmd *cli.Command) error {
 	err, resp := makeRequest(cmd.String("remote"), comRequest{
 		Action: "config:readraw",
 		Key: cmd.String("hardkey"),
-	})
+	}, cmd.Bool("debug-local-rays"))
 	if err != nil {
 		return err
 	}
@@ -23,8 +23,7 @@ func config(cc context.Context, cmd *cli.Command) error {
 	configstr, ok := resp.Data.Payload.(string)
 	config, berr := base64.StdEncoding.DecodeString(configstr)
 	if !ok || berr != nil {
-		fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
-		return errors.New("comline request returned unknown format")
+		return badFormat()
 	}
 
 	f, err := os.CreateTemp("", "rayc-config-*.json")
@@ -72,9 +71,9 @@ func config(cc context.Context, cmd *cli.Command) error {
 		Payload: map[string]string{
 			"config" : base64.StdEncoding.EncodeToString(newconfig),
 		},
-	})
+	}, cmd.Bool("debug-local-rays"))
 	if err != nil {return errors.New("req error")}
 
-	fmt.Println("Remember, you'll also need to run " + greenBold.Render("rray reload") + " for the changes to take effect!")
+	fmt.Println("Remember, you'll also need to run " + greenBold.Render("rayc reload") + " for the changes to take effect!")
 	return os.Remove(f.Name())
 }

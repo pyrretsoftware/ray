@@ -17,7 +17,7 @@ import (
 func getClient(rFlag string, unixAddr string) *http.Client {
 	if rFlag == "" {
 		if _, err := os.Stat(unixAddr); err != nil {
-			fmt.Println(redBold.Render("Could not find a comsocket on this machine."), "is ray server installed here or did yoy mean to use a remote comsocket?")
+			fmt.Println(redBold.Render("Could not find a comsocket on this machine."), "Is ray server installed here or did you intend to use a remote comsocket?")
 		}
 	}
 	transport := &http.Transport{
@@ -78,11 +78,14 @@ func getLocalComlineAddress() (string, error) {
 	return address, nil
 }
 
-func makeRequest(rFlag string, req comRequest) (error, comResponse) {
-	_, err := getLocalComlineAddress()
+func makeRequest(rFlag string, req comRequest, debug bool) (error, comResponse) {
+	localPath, err := getLocalComlineAddress()
 	if err != nil {return err, comResponse{}}
 	
-	c := getClient(rFlag, "../rays/ray-env/comsock.sock") //"../rays/ray-env/comsock.sock"
+	if debug {
+		localPath = "../rays/ray-env/comsock.sock"
+	}
+	c := getClient(rFlag, localPath)
 	if rFlag == "" {
 		rFlag = "http://how-can-you-see-this"
 		if req.Key == "" {

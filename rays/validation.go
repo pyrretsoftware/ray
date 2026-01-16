@@ -11,26 +11,29 @@ var deploymentTypes = []string{
 }
 
 func validateConfig(config rayconfig) {
+	rlog.Debug("Validating configuration file...")
 	if !rconf.RLSConfig.Enabled && len(rconf.RLSConfig.Helpers) > 0 {
 		rlog.Fatal("Helper servers are defined but RLS have not been enabled.")
 	}
 
-	var nameList []string
+	nameList := []string{}
+	domainList := []string{}
 	for _, project := range config.Projects {
+		if project.Domain != "" {
+			if slices.Contains(domainList, project.Domain) {
+				rlog.Fatal("Fatal rayconfig error: two projects cannot reside on the same domain.")
+			}
+			domainList = append(domainList, project.Domain)
+		}
+
+		if project.CompatabilityMode == "docker" && !project.DockerOptions.NonNetworked && project.DockerOptions.ContainerPort == 0 {
+			rlog.Fatal("Fatal rayconfig error: please define the port used by the container when using DCM or set NonNetworked.")
+		}
+
 		if slices.Contains(nameList, project.Name) {
 			rlog.Fatal("Fatal rayconfig error: two projects cannot have the same name.")
 		}
-	}
-
-	var domainList []string
-	for _, project := range config.Projects {
-		if project.Domain == "" {continue}
-		if (!slices.Contains(domainList, project.Domain)) {
-			domainList = append(domainList, project.Domain)
-		} else {
-			rlog.Fatal("Fatal rayconfig error: two projects cannot reside on the same domain.")
-		}
-		
+		nameList = append(nameList, project.Name)
 	}
 	validateHelperServers(config.RLSConfig.Helpers)
 }
@@ -49,7 +52,7 @@ func validateDeployments(deployments []deployment) {
 	for _, deployment := range deployments {
 		if deployment.Type == "" {
 			rlog.Fatal("Fatal rayconfig error: one of the specified deployments have no type specified.")
-		} else if (!slices.Contains(deploymentTypes, deployment.Type)) {
+		} else if !slices.Contains(deploymentTypes, deployment.Type) {
 			rlog.Fatal("Fatal rayconfig error: one of the specifed deployments has a deployment type that's not valid.")
 		}
 
@@ -70,7 +73,7 @@ func validateDeployments(deployments []deployment) {
 }
 
 func validateProjectConfig(projectConfig projectConfig, project project) string {
-	if (projectConfig.NotWebsite) {
+	if projectConfig.NonNetworked {
 		if project.Domain != "" {
 			return "Fatal projectconfig error: project that's not a website cannot have a domain defined."
 		}
@@ -90,12 +93,12 @@ func validateProjectConfig(projectConfig projectConfig, project project) string 
 			alwaysRanDeploySteps += 1
 		}
 
-		if (step.Type != "deploy" && step.Type != "build") {
+		if step.Type != "deploy" && step.Type != "build" {
 			return "Fatal projectconfig error: only valid pipeline step types are 'deploy' and 'build'."
 		}
 	}
 
-	if (alwaysRanDeploySteps > 1) {
+	if alwaysRanDeploySteps > 1 {
 		return "Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be ran."
 	}
 	return ""

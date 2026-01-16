@@ -7,22 +7,22 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 )
+
+//com.go is for code actually comming on the line idk how to utrycka mig här faktsikt nej det vet jag inte
 
 const ()
 
-type ComLine interface {
+/*type ComLine interface {
 	//Read yields until a request is received, then returns a reader to read the request body, a writer to write the response body, and a method to set the response code.
 	Read() (receive io.Reader, respond io.WriteCloser, setCode func(code int))
-	//Init initalizes the interface, what this does of course depends of the type of comline used. It returns a closer that can be used to close the comline
+	//Init initalizes the interface, what this does of course depends of the type of comline used. It returns any errors encountered
 	Init() error
-	//Close closes the comline, this should return an error if the comline is not yet initalized
+	//Close closes the comline and returns any errors encountered. This also returns an error if the comline is not yet initalized.
 	Close() error
 	//AllowExtensions returns a boolean representing whether or not the comline accepts extensions
 	AllowExtensions() bool
-}
+}*/
 
 type ComLineReadResponse struct {
 	receive io.Reader
@@ -34,14 +34,8 @@ type HTTPComLine struct {
 	Host string //Used by ray router
 	Type string //the underlying network to use: tcp or unix
 	ExtensionsEnabled bool //whether or not the comline accepts extensions
-	srv *http.Server
-	mainc chan ComLineReadResponse
+	Handler func(w http.ResponseWriter, r *http.Request)
 	close func() error
-}
-
-func (c *HTTPComLine) Read() (receive io.Reader, respond io.WriteCloser, setCode func(code int)) {
-	resp := <- c.mainc
-	return resp.receive, resp.respond, resp.setCode
 }
 
 func (c *HTTPComLine) AllowExtensions() bool {
@@ -60,53 +54,36 @@ func (c *HTTPComLine) Close() error {
 }
 
 func (c *HTTPComLine) Init() error {
-	c.mainc = make(chan ComLineReadResponse, 1024)
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("content-type", "application/json")
-
-		rw := ReadWaiter{
-			w: w,
-			close: make(chan bool),
-		}
-		c.mainc <- ComLineReadResponse{
-			receive: r.Body,
-			respond: rw,
-			setCode: func(code int) {
-				w.WriteHeader(code)
-			},
-		}
-
-		rw.YieldClose()
-	})
-	c.srv = &http.Server{Addr: ":", Handler: handler}
-	host := filepath.Join(dotslash, c.Host) //only for unix sockets, changed by implementation
-
-	switch c.Type {
-	case "tcp", "tcp4", "tcp6":
-		port := strconv.Itoa(pickPort())
-		internalRouteTable[c.Host] = "http://127.0.0.1:" + port
-		host = ":" + port
-	case "unix":
+	if c.Type == "unix" {
+		host := AbsPath(c.Host)
 		if err := os.Remove(host); err != nil && !os.IsNotExist(err) {
 			rlog.Notify("Could not remove existing socket file:" + err.Error(), "warn")
 		}
-	}
 
-	l, err := net.Listen(c.Type, host)
-	if err != nil {
-		rlog.Notify("Could not listen on comsocket: " + err.Error(), "err")
+		l, err := net.Listen(c.Type, host)
+		if err != nil {
+			rlog.Notify("Could not listen on comsocket: " + err.Error(), "err")
+			return err
+		}
+
+		srv := http.Server{Addr: ":", Handler: http.HandlerFunc(c.Handler)}
+		c.close = srv.Close
+
+		go srv.Serve(l)
 		return nil
 	}
-	c.close = func() error {
-		delete(internalRouteTable, c.Host)
-		return c.srv.Close()
-	}
 
-	go c.srv.Serve(l)
+	
+
+
+
+
+
+	
 	return nil
 }
 
-func RespondToWriter(w io.WriteCloser, resp comResponse) error {
+func RespondToWriter(w http.ResponseWriter, resp comResponse) error {
 	resp.Ray.RayVer = Version
 	resp.Ray.ProtocolVersion = "1.0"
 
@@ -114,7 +91,5 @@ func RespondToWriter(w io.WriteCloser, resp comResponse) error {
 	if jerr != nil {return jerr}
 
 	_, err := w.Write(ba)
-	if err != nil {return err}
-	
-	return w.Close()
+	return err
 }

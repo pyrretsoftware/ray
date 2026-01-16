@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+//coma.go is for code defining and implementing all comline actions
+
 type ComError string
 const (
 	NotPermitted ComError = "PermissonError"
@@ -72,7 +74,7 @@ func configRead(permissons []string) (rayconfig, ComError) {
 	return rayconfig{}, NotPermitted
 }
 func configWrite(permissons []string, ba []byte) (ComError) {
-	if permOk(permissons, "config:write", "config:all", "special:all") {
+	if permOk(permissons, "config:write", "config:all", "special:all", "special:ext") {
 		var _conf rayconfig
 		jerr := json.Unmarshal(ba, &_conf)
 		if jerr != nil {
@@ -90,11 +92,17 @@ func channelForceRenrollment(permissons []string, projectName string) ComError {
 	if permOk(permissons, "channels:reenroll", "channels:all", "special:all", "special:ext") {
 		//this is more like a config change
 		newProj := []project{}
+		changed := false
 		for _, proj := range rconf.Projects {
 			if proj.Name == projectName {
 				proj.ForcedRenrollment = time.Now().Unix()
+				changed = true
 			}
 			newProj = append(newProj, proj)
+		}
+
+		if !changed {
+			return ComError("no project found with that name!")
 		}
 		rconf.Projects = newProj
 		err := writeConf(*rconf)
@@ -130,12 +138,11 @@ func rayReload(permissons []string) ComError {
 	}
 	return NotPermitted
 }
-func rayUpdate(permissons []string) ComError {
+func rayUpdate(permissons []string) ([]string, ComError) {
 	if permOk(permissons, "ray:update", "ray:all", "special:all", "special:ext") {
-		updateProjects(true)
-		return Success
+		return updateProjects(true), Success
 	}
-	return NotPermitted
+	return []string{}, NotPermitted
 }
 func raySystemctlRestart(permissons []string) ComError {
 	if permOk(permissons, "ray:restart", "ray:all", "special:all", "special:ext") {
@@ -161,6 +168,10 @@ func readProcessLog(permissons []string, id string) ([]byte, ComError) {
 		if process == nil {
 			return []byte(""), "process not found"
 		}
+
+		if process.log == nil {
+			return []byte(""), "no processlog, did the process ever start?"
+		}
 		return []byte(process.log.String()), Success
 	}
 	return []byte(""), NotPermitted
@@ -177,12 +188,16 @@ func readProcessBuildLog(permissons []string, id string) ([]byte, ComError) {
 		if process == nil {
 			return []byte(""), "process not found"
 		}
+
+		if process.log == nil {
+			return []byte(""), "no build log"
+		}
 		return process.BuildLog, Success
 	}
 	return []byte(""), NotPermitted
 }
 
-func HandleRequest(r comRequest, l ComLine) comResponse {
+func HandleRequest(r comRequest, l *HTTPComLine) comResponse {
 	if r.Key == "" {
 		return comResponse{
 			Data: comData{
@@ -312,7 +327,8 @@ func HandleRequest(r comRequest, l ComLine) comResponse {
 	case "ray:systemctl:restart":
 		response.Error = ComErrorString(raySystemctlRestart(comKey.Permissions))
 	case "ray:update":
-		response.Error = ComErrorString(rayUpdate(comKey.Permissions))
+		pl, err := rayUpdate(comKey.Permissions)
+		response.Error, response.Payload = ComErrorString(err), pl
 	case "ray:shutdown":
 		if permOk(comKey.Permissions, "ray:shutdown", "ray:all", "special:all", "special:ext") {
 			cleanUpAndExit()

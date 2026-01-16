@@ -17,7 +17,7 @@ func reload(cc context.Context, cmd *cli.Command) error {
 		Action: "ray:reload",
 		Key: cmd.String("hardkey"),
 		Payload: map[string]string{},
-	})
+	}, cmd.Bool("debug-local-rays"))
 	loading.Stop()
 	fmt.Println()
 	if err == nil {

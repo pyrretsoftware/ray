@@ -28,10 +28,10 @@ func parse(content string) (map[string][]string, error) {
 
 	for _, line := range strings.Split(strings.ReplaceAll(content, "\r", ""), "\n") {
 		if (!strings.Contains(line, platformListen[runtime.GOOS])) {continue}
-		if len(strings.Split(line, platformPidSeperator[runtime.GOOS])) == 0 {
+		if len(strings.Split(line, platformPidSeperator[runtime.GOOS])) < 2 {
 			return map[string][]string{}, errors.New("pidSeperator not present")
 		}
-		if len(strings.Split(line, ":")) == 0 {
+		if len(strings.Split(line, ":")) < 2 {
 			return map[string][]string{}, errors.New("colon not present")
 		}
 

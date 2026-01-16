@@ -3,33 +3,28 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 )
 
-//com manager
+//comm.go is for code managing the comlines defined in the config
 
-var comLines []ComLine
+var comLines []*HTTPComLine
 var extensions = map[string]Extension{}
 
-func ReadFromLineLoop(l ComLine) {
-	for {
-		ReadFromLine(l)
-	}
-}
-
-func ReadFromLine(l ComLine) {
-	recv, resp, setCode := l.Read()
-	r, err := io.ReadAll(recv)
+func ComlineHandler(wr http.ResponseWriter, hr *http.Request, l *HTTPComLine) {
+	wr.Header().Set("Content-Type", "application/json")
+	r, err := io.ReadAll(hr.Body)
 
 	if err != nil {
-		rlog.Notify("could not read from comline: " + err.Error(), "err")
+		rlog.Notify("Could not read from comline: " + err.Error(), "err")
 		return
 	}
 
 	var req comRequest
 	jerr := json.Unmarshal(r, &req)
 	if jerr != nil && len(r) > 0 {
-		setCode(400)
-		RespondToWriter(resp, comResponse{
+		wr.WriteHeader(400)
+		RespondToWriter(wr, comResponse{
 			Data: comData{
 				Error: "could not parse request: json error",
 			},
@@ -39,31 +34,38 @@ func ReadFromLine(l ComLine) {
 
 	fresp := HandleRequest(req, l)
 	if fresp.Data.Error != "" {
-		setCode(500)
+		wr.WriteHeader(500)
 	}
-	RespondToWriter(resp, fresp)
+	RespondToWriter(wr, fresp)
 }
 
-//loadlines loads the global comLines according to the provided configuration and initalizes them
+//loadlines loads the comLines defined in the provided configuration and initalizes them
 func LoadLines(c rayconfig) {
 	for _, cl := range comLines {
 		rerr.Notify("could not close comline: ", cl.Close(), true)
 	}
 
-	newComLines := []ComLine{}
+	newComLines := []*HTTPComLine{}
 	lines := append(c.Com.Lines, HTTPComLine{
 		Host: "./comsock.sock",
 		Type: "unix",
 		ExtensionsEnabled: true,
 	})
-	for _, cl := range lines {		
-		if cl.Init() != nil {
-			rlog.Notify("could not init comline: ", "err")
+
+	for _, cl := range lines {
+		clPtr := &cl
+		cl.Handler = func(w http.ResponseWriter, r *http.Request) {
+			ComlineHandler(w, r, clPtr)
+		}
+		
+		initErr := cl.Init()
+		if initErr != nil {
+			rlog.Notify("Failed initalizing comline: " + initErr.Error(), "err")
 			continue
 		}
-		clptr := &cl
-		newComLines = append(newComLines, clptr)
-		go ReadFromLineLoop(clptr)
+
+		rlog.Notify("Comline now open on " + cl.Host, "done")
+		newComLines = append(newComLines, clPtr)
 	}
 	comLines = newComLines
 }

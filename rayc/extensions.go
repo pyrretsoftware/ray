@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/urfave/cli/v3"
@@ -12,15 +11,14 @@ func extensions(cc context.Context, cmd *cli.Command) error {
 	err, resp := makeRequest(cmd.String("remote"), comRequest{
 		Action: "extensions:read",
 		Key:    cmd.String("hardkey"),
-	})
+	}, cmd.Bool("debug-local-rays"))
 	if err != nil {
 		return err
 	}
 
 	pl, ok := resp.Data.Payload.(map[string]any)
 	if !ok {
-		fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
-		return errors.New("comline request returned unknown format")
+		return badFormat()
 	}
 
 	for name, extData := range pl {

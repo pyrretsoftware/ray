@@ -13,7 +13,7 @@ func renroll(cc context.Context, cmd *cli.Command) error {
 		Payload: map[string]string{
 			"project" : cmd.String("project"),
 		},
-	})
+	}, cmd.Bool("debug-local-rays"))
 	if err != nil {
 		return err
 	}

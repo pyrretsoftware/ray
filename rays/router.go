@@ -21,7 +21,7 @@ type routerContextKey string
 const (
 	rayChannelKey       routerContextKey = "ray-channel"
 	raySpecialBehaviour routerContextKey = "ray-behaviour"
-	rayUnixSocketPath	routerContextKey = "ray-uds-p"
+	rayUnixSocketPath   routerContextKey = "ray-uds-p"
 	rayUtilMessage      routerContextKey = "rayutil-message"
 	rayUtilIcon         routerContextKey = "rayutil-icon"
 )
@@ -29,11 +29,13 @@ const (
 var errorCodes = map[string]string{
 	`unsupported protocol scheme ""`: "HostNotFound",
 	` connection refused`:            "ProcessOffline",
-	`EOF`:                            "ProcessEOF",                
+	`EOF`:                            "ProcessEOF",
 }
 
 func parseEnrollmentCookie(forcedRenrollment int64, cookie *http.Cookie, cerr error) bool {
-	if cerr != nil || cookie == nil || cookie.Valid() != nil {return false}
+	if cerr != nil || cookie == nil || cookie.Valid() != nil {
+		return false
+	}
 
 	var enrollTime int64 = 0
 	n, perr := strconv.ParseInt(cookie.Value, 10, 0)
@@ -66,9 +68,9 @@ func startHttpsServer(srv *http.Server, hosts []string) {
 
 var internalRouteTable = map[string]string{} //host: destUrl
 func startProxy() {
-	srv := &http.Server{Handler: &httputil.ReverseProxy{
+	rp := &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
-			r.Out.Header.Add("Via", r.In.Proto + " ray-router")			
+			r.Out.Header.Add("Via", r.In.Proto+" ray-router")
 			if r.In.Header.Get("x-rls-process") != "" {
 				rlsIp := net.ParseIP(strings.Split(r.In.RemoteAddr, ":")[0])
 
@@ -79,7 +81,7 @@ func startProxy() {
 						break
 					}
 				}
-				
+
 				if !fromHelperServer {
 					behaviourctx := context.WithValue(r.Out.Context(), raySpecialBehaviour, "SecurityBlock")
 					r.Out = r.Out.WithContext(behaviourctx)
@@ -109,7 +111,7 @@ func startProxy() {
 			for _, project := range rconf.Projects {
 				if project.Domain == r.In.Host {
 					foundProcess = true
-					requestProject = project 
+					requestProject = project
 					break
 				}
 			}
@@ -195,7 +197,7 @@ func startProxy() {
 					r.Out = r.Out.WithContext(behaviourctx)
 					return
 				} else {
-					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;" + html.EscapeString(chnl) + "&#39;")
+					infoctx := context.WithValue(r.Out.Context(), rayUtilMessage, "Logged in to development channel &#39;"+html.EscapeString(chnl)+"&#39;")
 					infoctx = context.WithValue(infoctx, rayUtilIcon, "login")
 					r.Out = r.Out.WithContext(infoctx)
 					r.Out.Header.Del("If-None-Match")
@@ -222,7 +224,7 @@ func startProxy() {
 				//regular processes
 				var foundProcesses []process
 				for _, process := range processes { //see above for more info
-					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" && !process.ProjectConfig.NotWebsite {
+					if process.Project.Domain == r.In.Host && process.Branch == chnl && process.RLSInfo.Type != "adm" && !process.ProjectConfig.NonNetworked {
 						if process.State == "drop" {
 							existsAsDropped = true
 							continue
@@ -235,7 +237,9 @@ func startProxy() {
 						foundProcesses = append(foundProcesses, *process)
 					}
 				}
-				if len(foundProcesses) == 0 {return}
+				if len(foundProcesses) == 0 {
+					return
+				}
 
 				var ipSum float64 = 0 //from 0 to 1020 (255 * 4)
 				for _, ipByte := range strings.Split(strings.Split(r.In.RemoteAddr, ":")[0], ".") {
@@ -248,8 +252,8 @@ func startProxy() {
 
 				//experimental: new pick algo
 				weights := weightArray(foundProcesses)
-				pick := weightedPick(foundProcesses, weights, ipSum / 1020) //the ip sum can be 0-1020
-				
+				pick := weightedPick(foundProcesses, weights, ipSum/1020) //the ip sum can be 0-1020
+
 				//default: local server over tcp
 				destUrl := "http://127.0.0.1:" + strconv.Itoa(pick.Port)
 				destUds := ""
@@ -299,7 +303,6 @@ func startProxy() {
 		},
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				rlog.Debug("we be dialing fr " + addr)
 				udsp := ctx.Value(rayUnixSocketPath)
 				if udsp == nil {
 					//likely rls causing this not to be set
@@ -319,21 +322,22 @@ func startProxy() {
 		},
 		ModifyResponse: func(r *http.Response) error {
 			r.Header.Add("x-handled-by", "ray")
-			r.Header.Add("Via", r.Proto + " ray-router")
+			r.Header.Add("Via", r.Proto+" ray-router")
 
 			if chnl, ok := r.Request.Context().Value(rayChannelKey).(string); ok {
 				r.Header.Add("Set-Cookie", "ray-channel="+chnl+";Max-Age=31536000") //expires after 1 year
 				r.Header.Add("Set-Cookie", "ray-enrolled-at="+strconv.FormatInt(time.Now().Unix(), 10)+";Max-Age=31536000")
 			}
 
-			if strings.Contains(r.Header.Get("Content-Type"), "text/html") && rconf.EnableRayUtil && !strings.Contains(r.Header.Get("Cache-Control"), "no-transform") {
+			rayUtilOk := r.Header.Get("HX-Request") == "" && (r.Header.Get("Sec-Fetch-Dest") == "document") && !strings.Contains(r.Header.Get("Cache-Control"), "no-transform")
+			if strings.Contains(r.Header.Get("Content-Type"), "text/html") && rconf.EnableRayUtil && rayUtilOk {
 				icon, _ := r.Request.Context().Value(rayUtilIcon).(string)
 				message, _ := r.Request.Context().Value(rayUtilMessage).(string)
 
 				body, err := io.ReadAll(r.Body)
 				r.Body.Close()
 				if err != nil {
-					rlog.Notify("Failed http request reading body, not injecting rayutil", "warn")
+					rlog.Notify("Failed reading http request body, not injecting rayutil", "warn")
 					return nil
 				}
 
@@ -396,7 +400,19 @@ func startProxy() {
 			}
 			w.Write([]byte(errorContent))
 		},
-	}}
+	}
+
+
+	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, v := range comLines {
+			if v.Type != "unix" && r.Host == v.Host {
+				v.Handler(w, r)
+				return
+			}
+		}
+
+		rp.ServeHTTP(w, r)
+	})}
 	go startHttpServer(srv)
 	rlog.Notify("Started ray router (http)", "done")
 	if rconf.TLS.Provider != "" {

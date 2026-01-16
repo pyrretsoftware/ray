@@ -35,25 +35,47 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 
 	//step 0: config validation and preperation
 
-	if !project.DockerOptions.NotWebsite {
+	if !project.DockerOptions.NonNetworked {
 		process.Port = pickPort()
 	}
 
+	//pull image
 	rlog.BuildNotify("Now pulling container image '"+project.Src+"' for " + project.Name, "info")
-	var stepZeroLogBuffer strings.Builder
+	var pullLogBuffer strings.Builder
 	pull := exec.Command("docker", "pull", project.Src)
-	pull.Stdout = &stepZeroLogBuffer
-	pull.Stderr = &stepZeroLogBuffer
+	pull.Stdout = &pullLogBuffer
+	pull.Stderr = &pullLogBuffer
 
 	pullError := pull.Run()
+	finishLogSection(&pullLogBuffer, &logFile, -1, pipelineStep{Tool: "Pull container image"}, pullError == nil)
 	if pullError != nil {
 		rlog.BuildNotify("Failed pulling image '"+project.Src+" for " + project.Name, "err")
-		rlog.BuildNotify(stepZeroLogBuffer.String(), "err")
+		rlog.BuildNotify(pullLogBuffer.String(), "err")
 		rlog.BuildNotify("OS Error:" + pullError.Error(), "err")
+
+		finishProcess(logFile, &process, *project, branch, logPath)
+		processes = append(processes, &process)
+		return
 	} else {
 		rlog.BuildNotify("Successfully pulled image for " + project.Name, "done")
 	}
-	finishLogSection(&stepZeroLogBuffer, &logFile, -1, pipelineStep{Tool: "Pull container image"}, pullError == nil)
+
+
+	//add files
+	var addFilesLogBuffer strings.Builder
+	addFilesLogBuffer.WriteString("Adding files...\n")
+	err := AddFiles(project.Files, envDir, &addFilesLogBuffer)
+	if err != nil {
+		addFilesLogBuffer.WriteString("Failed adding files: " + err.Error() + "\n")
+		process.Active = false
+		process.State = err.Error()
+		finishProcess(logFile, &process, *project, branch, logPath)
+		processes = append(processes, &process)
+	} else {
+		addFilesLogBuffer.WriteString("All files to be added have been added.")
+	}
+	finishLogSection(&addFilesLogBuffer, &logFile, -1, pipelineStep{Tool: "Add files"}, err == nil)
+	if err != nil {return}
 
 	var deployLogBuffer strings.Builder 
 
@@ -69,10 +91,18 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		args = append(args, "-e", key)
 	}
 
-	args = append(args, "--init", "-p", strconv.Itoa(process.Port) + ":" + strconv.Itoa(project.DockerOptions.ContainerPort), "--name", containerName)
+	if !project.DockerOptions.NonNetworked {
+		args = append(args, "-p", strconv.Itoa(process.Port) + ":" + strconv.Itoa(project.DockerOptions.ContainerPort))
+	}
+
+	for source, dest := range project.DockerOptions.Volumes {
+		args = append(args, "-v", filepath.Join(envDir, source) + ":" + dest)
+	}
+
+	args = append(args, "--init", "--name", containerName)
 	args = append(args, project.Src)
 
-	cmd := exec.Command("docker", args...) //docker run -it --rm -e API_URL="https://api.url.example/" --init -p 8080:9000
+	cmd := exec.Command("docker", args...)
 	cmd.Env = cmd.Environ()
 	for key, val := range envs {
 		cmd.Env = append(cmd.Env, key + "=" + val)
@@ -133,16 +163,15 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		}
 		process.Active = false
 		finishLogSection(&deployLogBuffer, &logFile, 0, pipelineStep{Tool: "Running container (deploy step)"}, false)
-		} else {
-			rlog.BuildNotify("Successfully started container '" + project.Src + "' for " +project.Name+" (deployment " + branch  + ")", "done")
+	} else {
+		rlog.BuildNotify("Successfully started container '" + project.Src + "' for " +project.Name+" (deployment " + branch  + ")", "done")
 
-			process.Processes = append(process.Processes, cmd.Process.Pid)
-			process.log = &deployLogBuffer
-			go trackProcess(cmd, &process, &deployLogBuffer)
+		process.Processes = append(process.Processes, cmd.Process.Pid)
+		process.log = &deployLogBuffer
+		go trackProcess(cmd, &process, &deployLogBuffer)
 			//go waitForProcessListen(&process, "DOCKER", true) //maybe not use this for now
-		}
+	}
 	
-
 	finishProcess(logFile, &process, *project, branch, logPath)
 	processes = append(processes, &process)
 }

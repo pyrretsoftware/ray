@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-//Register any plugins here
+// Register any plugins here
 var plugins = map[string]func(project project) string{
-	"raystatus" : generateStatus,
+	"raystatus": generateStatus,
 }
 
-//plugin code
+// plugin code
 // #region plugins
 func generateStatus(project project) string {
 	var status rayStatus
 	status.Name = project.Options["RSName"]
 	status.Desc = project.Options["RSDesc"]
-	
+
 	up := true
 	for _, proc := range processes {
 		if proc.Ghost {
@@ -28,7 +28,7 @@ func generateStatus(project project) string {
 			up = false
 		}
 		listentingOn := `, Listenting on ` + proc.Project.Domain + `, `
-		if (proc.ProjectConfig.NotWebsite) {
+		if proc.ProjectConfig.NonNetworked {
 			listentingOn = ", "
 		}
 		status.Processes = append(status.Processes, statusItem{
@@ -47,10 +47,11 @@ func generateStatus(project project) string {
 
 	return string(statusJson)
 }
-// #endregion 
+
+// #endregion
 
 func invokePlugin(project project) (string, bool) {
-	if (plugins[project.PluginImplementation] != nil) {
+	if plugins[project.PluginImplementation] != nil {
 		return plugins[project.PluginImplementation](project), true
 	}
 	return "", false

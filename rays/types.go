@@ -12,9 +12,16 @@ type deployment struct {
 	Enrollment float64
 }
 
+type ProjectFile struct {
+	Path string
+	Type string //either "zip" or ommited for regular files
+	Blob []byte
+}
+
 type DockerOptions struct {
-	NotWebsite bool
-	ContainerPort int
+	NonNetworked bool `json:"NonNetworked,omitempty"`
+	ContainerPort int `json:"ContainerPort,omitempty"`
+	Volumes map[string]string
 }
 type project struct {
 	Src string
@@ -24,8 +31,9 @@ type project struct {
 	Deployments []deployment `json:"Deployments,omitempty"`
 	ProdType string `json:"ProdType,omitempty"`
 	CompatabilityMode string `json:"CompatabilityMode,omitempty"`
-	DockerOptions DockerOptions
-	PluginImplementation string `json:"PluginImplementation,omitempty"`
+	DockerOptions DockerOptions `json:"DockerOptions,omitempty"`
+	Files []ProjectFile
+	PluginImplementation string `json:"PluginImplementation,omitempty"` //its recommended to not use this and instead use the project configs pluginimplementation field
 	Options map[string]string `json:"Options,omitempty"`
 	DeployOn []string 
 	Middleware string `json:"Middleware,omitempty"`
@@ -152,7 +160,8 @@ type pipelineStep struct {
 type projectConfig struct {
 	Version string
 	LenientPorts bool
-	NotWebsite bool
+	NonNetworked bool
+	PluginImplementation string `json:"PluginImplementation,omitempty"`
 	Pipeline []pipelineStep
 }
 
