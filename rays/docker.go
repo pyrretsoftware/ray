@@ -23,6 +23,9 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	process.Active = true
 	process.State = "OK"
 	process.ProjectConfig = &projectConfig{}
+	process.remove = func() {
+		rlog.Println("Did not remove process, process never started.")
+	}
 	if RLSHost == "127.0.0.1" {
 		process.RLSInfo.Type = "local"
 	} else {
@@ -49,6 +52,8 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	pullError := pull.Run()
 	finishLogSection(&pullLogBuffer, &logFile, -1, pipelineStep{Tool: "Pull container image"}, pullError == nil)
 	if pullError != nil {
+		process.Active = false
+		process.State = pullLogBuffer.String() + ", " + pullError.Error()
 		rlog.BuildNotify("Failed pulling image '"+project.Src+" for " + project.Name, "err")
 		rlog.BuildNotify(pullLogBuffer.String(), "err")
 		rlog.BuildNotify("OS Error:" + pullError.Error(), "err")

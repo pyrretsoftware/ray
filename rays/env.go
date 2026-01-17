@@ -188,7 +188,7 @@ func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pi
 func finishProcess(logFile logFile, process *process, project project, branch string, logPath string) {
 	logFile.Name = project.Name + " (branch " + branch + ")"
 	if process.Active && process.State == "OK" {
-		rlog.Notify(project.Name+", branch "+branch+" was sucessfully deployed!", "done")
+		rlog.Notify(project.Name+", branch "+branch+" was successfully deployed!", "done")
 		logFile.Success = true
 		go triggerEvent("newProcess", *process)
 	} else {
@@ -523,7 +523,7 @@ func startProject(project *project, hardCommit string) {
 func cleanUpAndExit() {
 	rlog.Println("Cleaning up enviroument.")
 	for _, proc := range processes {
-		if proc.State != "OK" {continue}
+		if proc != nil || proc.State != "OK" {continue}
 		
 		proc.remove()
 	}

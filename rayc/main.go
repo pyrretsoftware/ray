@@ -49,6 +49,7 @@ func main() {
 			},
 			&cli.BoolFlag{
 				Name: "debug-local-rays",
+				Aliases: []string{"debug"},
 				Value: false,
 				Usage: "for debugging use, do not use!",
 			},

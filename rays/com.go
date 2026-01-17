@@ -73,13 +73,7 @@ func (c *HTTPComLine) Init() error {
 		return nil
 	}
 
-	
-
-
-
-
-
-	
+	c.close = func() error {return nil}
 	return nil
 }
 

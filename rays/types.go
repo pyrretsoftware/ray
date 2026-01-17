@@ -112,7 +112,8 @@ type webhook struct {
 }
 type monitoringConfig struct {
 	Webhooks []webhook `json:"Webhooks,omitempty"`
-	TriggerOn []string `json:"TriggerOn,omitempty"` //enum array, can contain "processError", "rlsConnectionLost", "rlsConnectionMade", "newProcess", "raysExit", "raysStart"
+	TriggerOn []string `json:"TriggerOn,omitempty"` //enum array, can contain "all", or event names (eg. "processError")
+	CatMode bool //whether or not to send a cat picture along discord monitoring information.
 }
 
 type Key struct {
