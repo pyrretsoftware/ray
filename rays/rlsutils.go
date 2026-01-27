@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+type RLSipPair struct {
+	Public net.IP
+	Private net.IP
+}
+
 var Connections []*rlsConnection
 var RLSinitialConnectionOver = false
 

@@ -406,7 +406,7 @@ func startProxy() {
 	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, v := range comLines {
 			if v.Type != "unix" && r.Host == v.Host {
-				v.Handler(w, r)
+				v.handler(w, r)
 				return
 			}
 		}

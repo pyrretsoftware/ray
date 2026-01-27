@@ -7,6 +7,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+
+
 func auth(cc context.Context, cmd *cli.Command) error {
 	err, resp := makeRequest(cmd.String("remote"), comRequest{
 		Action: "channel:auth",

@@ -30,14 +30,6 @@ type ComLineReadResponse struct {
 	setCode func(code int)
 }
 
-type HTTPComLine struct {
-	Host string //Used by ray router
-	Type string //the underlying network to use: tcp or unix
-	ExtensionsEnabled bool //whether or not the comline accepts extensions
-	Handler func(w http.ResponseWriter, r *http.Request)
-	close func() error
-}
-
 func (c *HTTPComLine) AllowExtensions() bool {
 	if c.Type == "unix" {
 		return c.ExtensionsEnabled
@@ -66,7 +58,7 @@ func (c *HTTPComLine) Init() error {
 			return err
 		}
 
-		srv := http.Server{Addr: ":", Handler: http.HandlerFunc(c.Handler)}
+		srv := http.Server{Addr: ":", Handler: http.HandlerFunc(c.handler)}
 		c.close = srv.Close
 
 		go srv.Serve(l)

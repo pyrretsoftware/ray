@@ -54,7 +54,7 @@ func LoadLines(c rayconfig) {
 
 	for _, cl := range lines {
 		clPtr := &cl
-		cl.Handler = func(w http.ResponseWriter, r *http.Request) {
+		cl.handler = func(w http.ResponseWriter, r *http.Request) {
 			ComlineHandler(w, r, clPtr)
 		}
 		

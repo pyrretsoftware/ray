@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type auth struct {
+	Token string
+	ValidUntil time.Time
+}
+
 var devAuth auth = auth{
 	Token: "",
 	ValidUntil: time.Time{},
