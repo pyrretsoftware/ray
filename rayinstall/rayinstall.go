@@ -133,9 +133,12 @@ func main() {
 	switch boxResult {
 	case 0:
 		Install(installLocation, *forceFlag, false)
+		Collect("installation")
 	case 1:
 		Install(installLocation, *forceFlag, true)
+		Collect("installation")
 	case 2:
+		Collect("uninstallation")
 		Uninstall(installLocation, *forceFlag)
 	case 3:
 		if err := os.WriteFile("./export-rays" + fileEnding, Raysbinary, 0600); err != nil {
