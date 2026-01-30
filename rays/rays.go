@@ -8,6 +8,7 @@ import (
 
 //go:embed version
 var Version string
+
 var DebugLogsEnabled bool
 
 func main() {

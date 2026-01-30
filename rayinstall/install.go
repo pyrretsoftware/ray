@@ -8,95 +8,75 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
 
-func systemdRegisterDaemon(service string) {
-	err := os.WriteFile("/etc/systemd/system/rays.service", []byte(service), 0644)
-
-	if (err != nil){
-		fmt.Println("Cant create systemd daemon:")
-		fmt.Println(err)
+func Install(installLocation string, forceFlag bool, repair bool) {
+	if _, err := os.Stat(path.Join(installLocation, "rays"+fileEnding)); err == nil {
+		fmt.Println("update")
+		StopDaemon(installLocation, forceFlag, repair)
 	} else {
-		fmt.Println("Successfully registered as a systemd daemon!")
+		fmt.Println("install")
+		os.Mkdir(filepath.Join(installLocation, "ray-env"), 0600)
+		if _, err := os.Stat(filepath.Join(installLocation, "ray-env", "rayconfig.json")); errors.Is(err, os.ErrNotExist) {
+			fmt.Println("Created default config.")
+			os.WriteFile(filepath.Join(installLocation, "ray-env", "rayconfig.json"), []byte(defaultConfig), 0600)
+		} else {
+			fmt.Println("Config already exists, using existing one.")
+		}
 	}
-}
-
-func registerDaemon(path string) {
-	if (runtime.GOOS == "windows") {
-		fmt.Println("Rays has not been daemonized since you're on Windows. If you want rays to automatically start on boot you will have to register it as a service manually.")
-		return
+	
+	binPath := filepath.Join(installLocation, "rays" + fileEnding)
+	err := os.WriteFile(binPath, Raysbinary, 0667)
+	if err != nil {
+		log.Fatalf("Failed to write rays binary to %s: %v", path.Join(installLocation, "rays"+fileEnding), err)
 	}
+	fmt.Println("Binary added/updated.")
 
-	daemon := strings.ReplaceAll(systemdService, "${BinaryPath}", path)
+	daemon := strings.ReplaceAll(systemdService, "${BinaryPath}", path.Join(installLocation, "rays"+fileEnding))
 	cuser, err := user.Current()
-	if (err != nil) {
+	if err != nil {
 		log.Fatal("Cant get current user: " + err.Error())
 	}
 
-	daemon = strings.ReplaceAll(daemon, "${User}", cuser.Username)
-	systemdRegisterDaemon(daemon)	
-}
-
-func installPack(raysBin []byte) {
-	installLocation := "/usr/bin"
 	if runtime.GOOS == "windows" {
-		dir, err := os.UserHomeDir()
-		log.Println("Since you're on Windows, you will need to add %%USERPROFILE%% to your path variable if you want to use the 'rays' command globally.")
+		fmt.Println("Binpath =", binPath)
+		cmd := exec.Command("schtasks", "/create", "/f", "/tn", "rays", "/tr", binPath + " daemon", "/sc", "onstart")
+		ba, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("Could not register service with task scheduler. MAKE SURE YOU ARE RUNNING AS ADMINISTRATOR.")
+			fmt.Println(string(ba), err)
+			os.Exit(1)
 		}
-		installLocation = dir
-	}
+		fmt.Println("Created service.")
 
-	if _, err := os.Stat(path.Join(installLocation, "rays")); err == nil {
-		log.Println("Rays is already installed, updating...")
-
-		if (runtime.GOOS == "linux") {
-			log.Println("Stopping rays...")
-			exec.Command("systemctl", "stop", "rays").Run()
+		cmd = exec.Command("schtasks", "/run", "/tn", "rays")
+		ba, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Could not start the service with task scheduler. MAKE SURE YOU ARE RUNNING AS ADMINISTRATOR.")
+			fmt.Println(string(ba), err)
+			os.Exit(1)
 		}
+		fmt.Println("Started service.")
 	} else {
-		os.Mkdir(path.Join(installLocation, "ray-env"), 0600)
-		if _, err := os.Stat(path.Join(installLocation, "ray-env", "rayconfig.json")); errors.Is(err, os.ErrNotExist) {
-			log.Println("Created default config.")
-			os.WriteFile(path.Join(installLocation, "ray-env", "rayconfig.json"), []byte(defaultConfig), 0600)
+		err = os.WriteFile("/etc/systemd/system/rays.service", []byte(strings.ReplaceAll(daemon, "${User}", cuser.Username)), 0644)
+		if err != nil {
+			fmt.Println("Cant create systemd daemon:")
+			fmt.Println(err)
 		} else {
-			log.Println("Config already exists, using existing one.")
+			fmt.Println("Successfully registered as a systemd daemon!")
+
+			cmd := exec.Command("systemctl", "enable", "rays", "--now")
+			err := cmd.Run()
+			if err != nil {
+				fmt.Println("Could not enable and start rays.")
+				fmt.Println()
+				os.Exit(1)
+			}
 		}
 	}
 
-	err := os.WriteFile(path.Join(installLocation, "rays" + fileEnding), raysBin, 0667)
-	if err != nil {
-		log.Fatalf("Failed to write rays binary to %s: %v", path.Join(installLocation, "rays" + fileEnding), err)
-	}
-	
-	registerDaemon(path.Join(installLocation, "rays" + fileEnding))
+	fmt.Println("Installation complete!")
 }
-
-var systemdService string = `[Unit]
-Description=ray server (rays)
-After=network-online.target
-
-[Service]
-User=${User}
-Type=idle
-Restart=always
-ExecStart=${BinaryPath} daemon
-ExecReload=${BinaryPath} reload
-ExecStop=${BinaryPath} exit
-
-[Install]
-WantedBy=multi-user.target`
-
-var defaultConfig string = `{
-    "EnableRayUtil" : true,
-    "Projects": [
-        {
-            "Name": "ray demo",
-            "Src": "https://github.com/pyrretsoftwarelabs/ray-demo",
-            "Domain": "localhost"
-        }
-    ]
-}`
