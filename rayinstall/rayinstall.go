@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -42,6 +43,8 @@ var Grey = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080"))
 
 var fileEnding string
 func main() {
+	Version = strings.ReplaceAll(Version, "\n", "")
+	Version = strings.ReplaceAll(Version, "\r", "")
 	forceFlag := flag.Bool("force", false, "forces update even if ray server appears to be currently running.")
 	flag.Parse()
 
