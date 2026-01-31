@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 func systemdDaemonExists() bool {
@@ -40,6 +41,7 @@ func StopDaemon(installLocation string, forceFlag bool, repair bool) {
 			fmt.Println(string(ba), err)
 			os.Exit(1)
 		}
+		time.Sleep(3 * time.Second)
 	}
 }
 
