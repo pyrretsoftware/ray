@@ -9,12 +9,12 @@ import (
 
 //Channel;A channel/deployment is a version of a project based on a git branch. It is sometimes used synonymously with branch.
 type deployment struct {
-	Branch string
 	//Git branch to base this deployment/channel on. This is also used as the channel's name.
-	Type string
+	Branch string
 	//Type of channel, enum which can be set to "dev" (requires access to server to access channel), "test" (enroll a percentage of new users onto the channel) or "hidden" (no restrictions on who can access the channel but users are not enrolled automatically)
-	Enrollment float64
+	Type string
 	//Percentage of user to enroll into the channel. Should not be set unless Type is "test"
+	Enrollment float64
 }
 
 //File;Ray Files are files that you can define in your config that will be placed in each deployments directory. This can be used for configuration files among other things.
