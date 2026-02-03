@@ -110,12 +110,13 @@ type DiscordMessage struct {
 	Event string
 	What string
 	Where string
+	Sent time.Time
 	Regarding []string
 }
 
 var LastDiscordMessage *DiscordMessage
 func ConstructDiscordMessage(okay bool, event string, what string, regarding []string, where string, RCOA string) (result string, id string) { 
-	if LastDiscordMessage != nil && event == LastDiscordMessage.Event && what == LastDiscordMessage.What && where == LastDiscordMessage.Where {
+	if LastDiscordMessage != nil && event == LastDiscordMessage.Event && what == LastDiscordMessage.What && where == LastDiscordMessage.Where && LastDiscordMessage.Sent.Add(30 * time.Minute).After(time.Now()) {
 		id = LastDiscordMessage.Id
 		LastDiscordMessage.Regarding = append(LastDiscordMessage.Regarding, regarding...)
 		regarding = LastDiscordMessage.Regarding

@@ -6,17 +6,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 func Uninstall(installLocation string, forceFlag bool) {
 	fmt.Println("uninstall")
-	fmt.Println("Are you sure you want to uninstall? (y/n)")
+	fmt.Print("Are you sure you want to uninstall? (y/n)")
 	continueStr := ""
 	_, err := fmt.Scan(&continueStr)
 	if err != nil || (continueStr != "y" && continueStr != "yes")  {
 		fmt.Println("Aborting...")
 		return
 	}
+	fmt.Println()
 
 	fmt.Println("Stopping rays...")
 	StopDaemon(installLocation, forceFlag, false)
@@ -39,13 +41,17 @@ func Uninstall(installLocation string, forceFlag bool) {
 			os.Exit(1)
 		}
 	}
-	fmt.Println("Removing binary...")
 	binPath := filepath.Join(installLocation, "rays" + fileEnding)
-	err = os.Remove(binPath)
-	if err != nil {
-		fmt.Println("Could not remove binary:", err)
-		return
+	for {
+	fmt.Println("Removing binary...")
+		err = os.Remove(binPath)
+		if err != nil {
+			fmt.Println("Could not remove binary: " + err.Error() + ", trying again in 3 seconds...")
+			time.Sleep(3 * time.Second)
+		} else {
+			break
+		}
 	}
-
-	fmt.Println("Uninstalled successfully. Configuration was not removed and is stored in ", filepath.Join(installLocation, "ray-env"))
+	fmt.Println("Binary removed")
+	fmt.Println("Uninstalled successfully. Configuration was not removed and is stored in", filepath.Join(installLocation, "ray-env"))
 }
