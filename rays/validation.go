@@ -28,7 +28,7 @@ func validateConfig(config rayconfig) {
 			domainList = append(domainList, project.Domain)
 		}
 
-		if project.CompatabilityMode == "docker" && !project.DockerOptions.NonNetworked && project.DockerOptions.ContainerPort == 0 {
+		if project.CompatibilityMode == "docker" && !project.DockerOptions.NonNetworked && project.DockerOptions.ContainerPort == 0 {
 			rlog.Fatal("Fatal rayconfig error: please define the port used by the container when using DCM or set NonNetworked.")
 		}
 
@@ -41,12 +41,7 @@ func validateConfig(config rayconfig) {
 }
 
 func validateHelperServers(servers []helperServer) {
-	for _, server := range servers {
-		weightInt := int(server.Weight * 10000)
-		if weightInt%100 != 0 {
-			rlog.Fatal("RLS weight can only be max two decimal places.")
-		}
-	}
+	//NOOP for now
 }
 
 func validateDeployments(deployments []deployment) {
@@ -55,7 +50,7 @@ func validateDeployments(deployments []deployment) {
 		if deployment.Type == "" {
 			rlog.Fatal("Fatal rayconfig error: one of the specified deployments have no type specified.")
 		} else if !slices.Contains(deploymentTypes, deployment.Type) {
-			rlog.Fatal("Fatal rayconfig error: one of the specifed deployments has a deployment type that's not valid.")
+			rlog.Fatal("Fatal rayconfig error: one of the specified deployments has a deployment type that's not valid.")
 		}
 
 		if deployment.Enrollment < 0 && deployment.Type == "test" {
@@ -101,7 +96,7 @@ func validateProjectConfig(projectConfig prjcnf.ProjectConfig, project project) 
 	}
 
 	if alwaysRanDeploySteps > 1 {
-		return "Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be ran."
+		return "Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be run."
 	}
 	return ""
 }

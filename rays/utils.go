@@ -81,7 +81,7 @@ func AbsPath(path string) string {
 
 func getProcessFromBranch(branch string, project project) *process {
 	for _, process := range processes {
-		if (process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop") {
+		if process.Project.Name == project.Name && process.Branch == branch && !process.Ghost && process.State != "drop" {
 			return process
 		}
 	}

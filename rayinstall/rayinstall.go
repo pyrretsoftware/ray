@@ -71,7 +71,7 @@ func main() {
 	}
 
 	fileEnding = ""
-	if (runtime.GOOS == "windows") {
+	if runtime.GOOS == "windows" {
 		fileEnding = ".exe"
 	}
 	

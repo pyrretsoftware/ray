@@ -16,9 +16,9 @@ func systemdDaemonExists() bool {
 }
 
 func StopDaemon(installLocation string, forceFlag bool, repair bool) {
-	if (runtime.GOOS == "linux" && !systemdDaemonExists()){
+	if runtime.GOOS == "linux" && !systemdDaemonExists() {
 		if _, err := os.Stat(filepath.Join(installLocation, "ray-env", "comsock.sock")); err == nil {
-			if forceFlag {
+			if !forceFlag {
 				fmt.Println("Please manually stop ray server before attempting to update. If ray server is actually shut down, use the force flag.")
 				os.Exit(0)
 			}

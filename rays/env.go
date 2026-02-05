@@ -140,7 +140,7 @@ func startUpdateCheck() {
 func updateProjects(updateRollbacks bool) (failed []string) { //we wont print anything if no updates are found, as to not fill up log files
 	failed = []string{}
 	for _, project := range rconf.Projects {
-		if project.CompatabilityMode == "docker" {continue}
+		if project.CompatibilityMode == "docker" {continue}
 		branches := getBranches(project.Src)
 		doUpdate := false
 
@@ -442,7 +442,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 		dir := filepath.Join(rdata.RayEnv, procId)
 		os.Mkdir(dir, 0600)
 
-		if strings.ToLower(project.CompatabilityMode) != "docker" {
+		if strings.ToLower(project.CompatibilityMode) != "docker" {
 			_cmd := []string{"clone", project.Src}
 			if deployment.Type != "prod" {
 				_cmd = append(_cmd, "-b")
@@ -523,11 +523,12 @@ func startProject(project *project, hardCommit string) {
 }
 
 func cleanUpAndExit() {
-	rlog.Println("Cleaning up enviroument.")
+	rlog.Println("Cleaning up environment.")
 	for _, proc := range processes {
-		if proc != nil || proc.State != "OK" {continue}
-		
-		proc.remove()
+		if proc != nil { //write it like this to make lsp happy
+			if proc.State != "OK" {continue}
+			proc.remove()
+		}
 	}
 	exiting = true
 	os.RemoveAll(rdata.RayEnv)

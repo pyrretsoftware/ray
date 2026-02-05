@@ -53,8 +53,8 @@ type project struct {
 	Deployments []deployment `json:"Deployments,omitempty"`
 	//Type of the production deployment, works the same as deployment.Type. 
 	ProdType string `json:"ProdType,omitempty"`
-	//Special compatability mode for this project. Enum, may be set to "docker". Do not set if using standard ray build system.
-	CompatabilityMode string `json:"CompatabilityMode,omitempty"`
+	//Special compatibility mode for this project. Enum, may be set to "docker". Do not set if using standard ray build system.
+	CompatibilityMode string `json:"CompatabilityMode,omitempty"`
 	//Special options when using DCM (Docker Compatability Mode)
 	DockerOptions DockerOptions `json:"DockerOptions,omitempty"`
 	//Files declare files that will be created or zips that will be extracted in a deployments directory before the build process. Use for configuration files.

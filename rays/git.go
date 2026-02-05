@@ -64,7 +64,7 @@ func getBranches(repo string) map[string]string { //returns map with branch:hash
 
 			ref = strings.ReplaceAll(ref, "refs/heads/", "")
 			ref = strings.ReplaceAll(ref, "\n", "")
-			if (ref == "HEAD") {
+			if ref == "HEAD" {
 				ref = "prod"
 			}
 

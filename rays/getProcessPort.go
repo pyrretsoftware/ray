@@ -27,7 +27,7 @@ func parse(content string) (map[string][]string, error) {
 	table := map[string][]string{}
 
 	for _, line := range strings.Split(strings.ReplaceAll(content, "\r", ""), "\n") {
-		if (!strings.Contains(line, platformListen[runtime.GOOS])) {continue}
+		if !strings.Contains(line, platformListen[runtime.GOOS]) {continue}
 		if len(strings.Split(line, platformPidSeperator[runtime.GOOS])) < 2 {
 			return map[string][]string{}, errors.New("pidSeperator not present")
 		}

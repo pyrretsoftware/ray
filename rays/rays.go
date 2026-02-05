@@ -13,14 +13,14 @@ var DebugLogsEnabled bool
 
 func main() {
 	assignDotSlash()
-	if (!checkPerms()) {
+	if !checkPerms() {
 		rlog.Fatal("To launch rays you need to run as root or using sudo")
 	}
-	if (len(os.Args) == 1) {
+	if len(os.Args) == 1 {
 		rlog.Fatal("No arguments passed!")
 	}
 
-	if (os.Args[1] == "daemon") {
+	if os.Args[1] == "daemon" {
 		for _, arg := range os.Args {
 			if arg == "-d" || arg == "--show-debug" {
 				DebugLogsEnabled = true
