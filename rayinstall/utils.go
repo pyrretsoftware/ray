@@ -16,9 +16,9 @@ func systemdDaemonExists() bool {
 }
 
 func StopDaemon(installLocation string, forceFlag bool, repair bool) {
-	if (runtime.GOOS == "linux" && !systemdDaemonExists()){
+	if runtime.GOOS == "linux" && !systemdDaemonExists() {
 		if _, err := os.Stat(filepath.Join(installLocation, "ray-env", "comsock.sock")); err == nil {
-			if forceFlag {
+			if !forceFlag {
 				fmt.Println("Please manually stop ray server before attempting to update. If ray server is actually shut down, use the force flag.")
 				os.Exit(0)
 			}
@@ -26,25 +26,24 @@ func StopDaemon(installLocation string, forceFlag bool, repair bool) {
 	} else if runtime.GOOS == "linux" {
 		cmd := exec.Command("systemctl", "stop", "rays")
 
-		ba, err := cmd.CombinedOutput()
+		output, err := cmd.CombinedOutput()
 		if err != nil && !repair {
 			fmt.Println("Could not stop the service with systemd.")
-			fmt.Println(string(ba), err)
+			fmt.Println(string(output), err)
 			os.Exit(1)
 		}
 	} else if runtime.GOOS == "windows" {
 		cmd := exec.Command("schtasks", "/end", "/tn", "rays")
 
-		ba, err := cmd.CombinedOutput()
+		output, err := cmd.CombinedOutput()
 		if err != nil && !repair {
 			fmt.Println("Could not stop the service with task scheduler. MAKE SURE YOU ARE RUNNING AS ADMINISTRATOR.")
-			fmt.Println(string(ba), err)
+			fmt.Println(string(output), err)
 			os.Exit(1)
 		}
 		time.Sleep(3 * time.Second)
 	}
 }
-
 
 var systemdService string = `[Unit]
 Description=ray server (rays)
