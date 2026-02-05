@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"pyrret.com/rays/prjcnf"
 )
 
 func deployLocalDockerProcess(project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {
@@ -22,7 +24,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	process.Env = envDir
 	process.Active = true
 	process.State = "OK"
-	process.ProjectConfig = &projectConfig{}
+	process.ProjectConfig = &prjcnf.ProjectConfig{}
 	process.remove = func() {
 		rlog.Println("Did not remove process, process never started.")
 	}
@@ -50,7 +52,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	pull.Stderr = &pullLogBuffer
 
 	pullError := pull.Run()
-	finishLogSection(&pullLogBuffer, &logFile, -1, pipelineStep{Tool: "Pull container image"}, pullError == nil)
+	finishLogSection(&pullLogBuffer, &logFile, -1, prjcnf.PipelineStep{Tool: "Pull container image"}, pullError == nil)
 	if pullError != nil {
 		process.Active = false
 		process.State = pullLogBuffer.String() + ", " + pullError.Error()
@@ -79,7 +81,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	} else {
 		addFilesLogBuffer.WriteString("All files to be added have been added.")
 	}
-	finishLogSection(&addFilesLogBuffer, &logFile, -1, pipelineStep{Tool: "Add files"}, err == nil)
+	finishLogSection(&addFilesLogBuffer, &logFile, -1, prjcnf.PipelineStep{Tool: "Add files"}, err == nil)
 	if err != nil {return}
 
 	var deployLogBuffer strings.Builder 
@@ -167,7 +169,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 			rlog.BuildNotify(lbString, "err")
 		}
 		process.Active = false
-		finishLogSection(&deployLogBuffer, &logFile, 0, pipelineStep{Tool: "Running container (deploy step)"}, false)
+		finishLogSection(&deployLogBuffer, &logFile, 0, prjcnf.PipelineStep{Tool: "Running container (deploy step)"}, false)
 	} else {
 		rlog.BuildNotify("Successfully started container '" + project.Src + "' for " +project.Name+" (deployment " + branch  + ")", "done")
 

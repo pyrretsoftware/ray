@@ -329,7 +329,8 @@ func startProxy() {
 				r.Header.Add("Set-Cookie", "ray-enrolled-at="+strconv.FormatInt(time.Now().Unix(), 10)+";Max-Age=31536000")
 			}
 
-			rayUtilOk := r.Header.Get("HX-Request") == "" && (r.Header.Get("Sec-Fetch-Dest") == "document") && !strings.Contains(r.Header.Get("Cache-Control"), "no-transform")
+			//testing: (r.Header.Get("Sec-Fetch-Dest") == "document")
+			rayUtilOk := r.Header.Get("HX-Request") == "" && !strings.Contains(r.Header.Get("Cache-Control"), "no-transform")
 			if strings.Contains(r.Header.Get("Content-Type"), "text/html") && rconf.EnableRayUtil && rayUtilOk {
 				icon, _ := r.Request.Context().Value(rayUtilIcon).(string)
 				message, _ := r.Request.Context().Value(rayUtilMessage).(string)

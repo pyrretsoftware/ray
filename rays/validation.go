@@ -2,6 +2,8 @@ package main
 
 import (
 	"slices"
+
+	"pyrret.com/rays/prjcnf"
 )
 
 var deploymentTypes = []string{
@@ -72,7 +74,7 @@ func validateDeployments(deployments []deployment) {
 	}
 }
 
-func validateProjectConfig(projectConfig projectConfig, project project) string {
+func validateProjectConfig(projectConfig prjcnf.ProjectConfig, project project) string {
 	if projectConfig.NonNetworked {
 		if project.Domain != "" {
 			return "Fatal projectconfig error: project that's not a website cannot have a domain defined."

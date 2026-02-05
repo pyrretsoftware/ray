@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"pyrret.com/rays/prjcnf"
 )
 
 var exiting = false
@@ -176,7 +178,7 @@ func updateProjects(updateRollbacks bool) (failed []string) { //we wont print an
 	return
 }
 
-func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step pipelineStep, success bool) {
+func finishLogSection(logBuffer *strings.Builder, file *logFile, si int, step prjcnf.PipelineStep, success bool) {
 	logBuffer.WriteString("\nFinishing logging for this step\n")
 	file.Steps = append(file.Steps, logSection{
 		Name:    step.Tool + " (Step " + strconv.Itoa(si+1) + ")",
@@ -210,7 +212,7 @@ func finishProcess(logFile logFile, process *process, project project, branch st
 
 func deployLocalProcess(configPath string, dir string, project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {
 	rlog.BuildNotify("Attempting to launch "+project.Name+" (deployment "+branch+")", "info")
-	var config projectConfig
+	var config prjcnf.ProjectConfig
 	var process process
 
 	process.Branch = branch
@@ -244,7 +246,9 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			stepZeroLogBuffer.WriteString("Could not read project config.")
 			return
 		}
-		if err := json.Unmarshal(_config, &config); err != nil {
+		
+		config, err = prjcnf.TranslateAndMarshalConfig(_config)
+		if err != nil {
 			stepZeroLogBuffer.WriteString("Failed parsing project config, json unmarshaling error: " + err.Error())
 			return
 		}
@@ -267,7 +271,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 
 		stepZeroSuccess = true
 	}()
-	finishLogSection(&stepZeroLogBuffer, &logFile, -1, pipelineStep{Tool: "Initial preperation and validation"}, stepZeroSuccess)
+	finishLogSection(&stepZeroLogBuffer, &logFile, -1, prjcnf.PipelineStep{Tool: "Initial preperation and validation"}, stepZeroSuccess)
 	if !stepZeroSuccess {
 		process.Active = false
 		process.State = stepZeroLogBuffer.String()
@@ -487,8 +491,6 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 			go deployLocalProcess(projectConfig, filepath.Join(dir, content[0].Name()), project, &rm, branch, branchHash, path.Join(dir, "logs"), dir, procId, host)
 		} else {
 			os.Mkdir(path.Join(dir, "logs"), 0600)
-			//todo: implement
-
 			go deployLocalDockerProcess(project, &rm, deployment.Branch, "N/A", path.Join(dir, "logs"), dir, procId, host)
 		}
 	}

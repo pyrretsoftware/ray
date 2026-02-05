@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"pyrret.com/rays/prjcnf"
 )
 
 func serveStaticServer(srv *http.Server, process *process) {
@@ -29,7 +31,7 @@ func serveStaticServer(srv *http.Server, process *process) {
 	}
 }
 
-func rayserveFileServer(rootDir string, notFoundPage []byte, listingsDisabled bool, redirects []rayserveRedirect) http.HandlerFunc {
+func rayserveFileServer(rootDir string, notFoundPage []byte, listingsDisabled bool, redirects []prjcnf.RayserveRedirect) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cleanPath := filepath.Clean(r.URL.Path)
 		if strings.Contains(cleanPath, "..") { //if this returns true after cleaning we know we're trying to traverse further back than the root dir
@@ -159,7 +161,7 @@ func rayserveFileServer(rootDir string, notFoundPage []byte, listingsDisabled bo
 	}
 }
 
-func staticServer(dir string, port int, process *process, redirects []rayserveRedirect, listingsDisabled bool) *http.Server {
+func staticServer(dir string, port int, process *process, redirects []prjcnf.RayserveRedirect, listingsDisabled bool) *http.Server {
 	notFoundPage, err := os.ReadFile(path.Join(dir, "404.html"))
 	if err != nil {
 		rlog.Notify("Rayserve: No 404 page specified", "warn")
