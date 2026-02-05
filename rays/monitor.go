@@ -57,7 +57,7 @@ var messageFuncs = map[string]func(params any) string{
 		rlsConn, ok := params.(rlsConnection)
 		if !ok {return "rayMonitoringError"}
 		
-		return "🔌 RLS Connection **" + rlsConn.Name + "** (" + rlsConn.IP.String() +") was initalized!" 
+		return "🔌 RLS Connection **" + rlsConn.Name + "** (" + rlsConn.IP.String() +") was initialized!" 
 	},
 	"newProcess" : func(params any) string {
 		prc, ok := params.(process)
