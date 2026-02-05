@@ -7,7 +7,7 @@ As of right now, no vulnerabilities have been found and so all versions are supp
 
 You can use [this page](https://github.com/pyrretsoftware/ray/security/advisories) to report vulnerabilities, for high severity vulnerabilities, you may also contact me through:
 * discord: username is **axellse**, make sure to send a **message request** since i usually ignore friend requests.
-* email: security@pyrret.com
+* email: security [at] pyrret [dot] com
 
 The issue will likely be fixed and a security patch released as soon as i have time to check my pc. I usually reply within a week unless i'm on vacation, but please remember that ray is provided "as is" with no warranty. This is an open source hobby project.
 
