@@ -18,9 +18,20 @@ func slackWebhook(message string) string {
 	}`
 }
 func genericWebhook(message string) string {
-	return `{
-    	"message": "` + message + `"
-	}`
+	// Use json.Marshal to safely encode the message and avoid JSON injection.
+	payload := struct {
+		Message string `json:"message"`
+	}{
+		Message: message,
+	}
+
+	b, err := json.Marshal(payload)
+	if err != nil {
+		// Fallback to a static error message if marshalling fails.
+		return `{"message":"rayMonitoringError"}`
+	}
+
+	return string(b)
 }
 
 var webhooks = map[string]func(message string) string{
