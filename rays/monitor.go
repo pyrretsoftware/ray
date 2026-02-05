@@ -18,9 +18,20 @@ func slackWebhook(message string) string {
 	}`
 }
 func genericWebhook(message string) string {
-	return `{
-    	"message": "` + message + `"
-	}`
+	// Use json.Marshal to safely encode the message and avoid JSON injection.
+	payload := struct {
+		Message string `json:"message"`
+	}{
+		Message: message,
+	}
+
+	b, err := json.Marshal(payload)
+	if err != nil {
+		// Fallback to a static error message if marshalling fails.
+		return `{"message":"rayMonitoringError"}`
+	}
+
+	return string(b)
 }
 
 var webhooks = map[string]func(message string) string{
@@ -57,7 +68,7 @@ var messageFuncs = map[string]func(params any) string{
 		rlsConn, ok := params.(rlsConnection)
 		if !ok {return "rayMonitoringError"}
 		
-		return "🔌 RLS Connection **" + rlsConn.Name + "** (" + rlsConn.IP.String() +") was initalized!" 
+		return "🔌 RLS Connection **" + rlsConn.Name + "** (" + rlsConn.IP.String() +") was initialized!" 
 	},
 	"newProcess" : func(params any) string {
 		prc, ok := params.(process)
@@ -206,14 +217,14 @@ var discordFuncs = map[string]func(params any) (string, string){
 		rlsConn, ok := params.(rlsConnection)
 		if !ok {return "rayMonitoringError", ""}
 		
-		return ConstructDiscordMessage(false, "RLS connection(s) couldn't be initalized!", "Failed to connect to one or more RLS servers!", []string{"* " + rlsConn.Name + " (" + rlsConn.IP.String() + ", ray " + rlsConn.Health.Report.RayVersion + ")"}, "Local server (127.0.0.1)", "1. Make sure all involved servers are turned on and try rebooting them.\\n2. Make sure all the involved servers are can reach each other on the network.\\n3. Check the logs on the involved servers (for Linux with systemd, do ``journalctl -u rays``)")		
+		return ConstructDiscordMessage(false, "RLS connection(s) couldn't be initialized!", "Failed to connect to one or more RLS servers!", []string{"* " + rlsConn.Name + " (" + rlsConn.IP.String() + ", ray " + rlsConn.Health.Report.RayVersion + ")"}, "Local server (127.0.0.1)", "1. Make sure all involved servers are turned on and try rebooting them.\\n2. Make sure all the involved servers are can reach each other on the network.\\n3. Check the logs on the involved servers (for Linux with systemd, do ``journalctl -u rays``)")		
 
 	},
 	"rlsConnectionMade" : func(params any) (string, string) {
 		rlsConn, ok := params.(rlsConnection)
 		if !ok {return "rayMonitoringError", ""}
 		
-		return ConstructDiscordMessage(true, "RLS connection(s) initalized successfully!", "Successfully connected to one or more RLS servers!", []string{"* " + rlsConn.Name + " (" + rlsConn.IP.String() + ", ray " + rlsConn.Health.Report.RayVersion + ")"}, "Local server (127.0.0.1)", "")		
+		return ConstructDiscordMessage(true, "RLS connection(s) initialized successfully!", "Successfully connected to one or more RLS servers!", []string{"* " + rlsConn.Name + " (" + rlsConn.IP.String() + ", ray " + rlsConn.Health.Report.RayVersion + ")"}, "Local server (127.0.0.1)", "")		
 	},
 	"newProcess" : func(params any) (string, string) {
 		prc, ok := params.(process)
