@@ -31,10 +31,16 @@ func generateStatus(project project) string {
 		if proc.ProjectConfig.NonNetworked {
 			listentingOn = ", "
 		}
+
+		trimmedHash := strings.TrimLeft(proc.Hash, "0")
+		if len(trimmedHash) > 8 {
+			trimmedHash = trimmedHash[:8]
+		}
+		
 		status.Processes = append(status.Processes, statusItem{
 			Running: proc.Active,
 			Text:    proc.Project.Name + " (" + proc.Branch + " channel)",
-			Subtext: "Git hash: " + strings.TrimLeft(proc.Hash, "0")[:8] + listentingOn + strconv.Itoa(len(proc.Processes)) + " Running process.",
+			Subtext: "Git hash: " + trimmedHash + listentingOn + strconv.Itoa(len(proc.Processes)) + " Running process.",
 		})
 	}
 	status.EverythingUp = up
