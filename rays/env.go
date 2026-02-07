@@ -137,7 +137,38 @@ func startUpdateCheck() {
 	}
 }
 
-func updateProjects(updateRollbacks bool) (failed []string) { //we wont print anything if no updates are found, as to not fill up log files
+func updateProjects(updateRollbacks bool) (failed []string) {
+	failed = []string{}
+	alreadyUpdated := []string{}
+
+	for _, process := range processes {
+		if process.Hash == "" {
+			rlog.Debug("Cant update: process hash is unset")
+		}
+
+		branches := getBranches(process.Project.Src) //might lowkenuinely be a good idea to cache this
+		if branches == nil || branches[process.Branch] == "" {
+			rlog.Debug("Cant update: cant fetch new process hash")
+			failed = append(failed, process.Project.Name + ":" + process.Branch)
+			continue
+		}
+
+		//if we're rolled back and the newest version is the faulty version
+		if strings.HasPrefix(process.Hash, "rollback:") && strings.Replace(process.Hash, "rollback:", "", 1) == branches[process.Branch] && !updateRollbacks {
+			continue
+		}
+
+		rlog.Debug("hash is " + process.Hash)
+		if branches[process.Hash] != process.Hash && !slices.Contains(alreadyUpdated, process.Project.Name) {
+			rlog.Println("Performing update on " + process.Project.Name)
+			startProject(process.Project, "")
+			alreadyUpdated = append(alreadyUpdated, process.Project.Name)
+		}
+	}
+	return
+}
+
+func updateProjectsLegacy(updateRollbacks bool) (failed []string) {
 	failed = []string{}
 	for _, project := range rconf.Projects {
 		if project.CompatibilityMode == "docker" {continue}
@@ -147,7 +178,7 @@ func updateProjects(updateRollbacks bool) (failed []string) { //we wont print an
 		dplymnt := project.Deployments
 		dplymnt = append(dplymnt, deployment{
 			Type:   "prod",
-			Branch: "prod", //removed this once because me stupid, NOT AGAIN!!!!!!!1
+			Branch: "prod", //removed this once because im stupid, NOT AGAIN!!!
 		})
 
 		for _, deployment := range dplymnt {

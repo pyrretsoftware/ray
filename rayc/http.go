@@ -69,7 +69,7 @@ func getLocalComlineAddress() (string, error) {
 		dir, err := os.UserHomeDir()
 		if err != nil {return "", err}
 
-		address = filepath.Join(dir, "ray-env", "comsock.sock")
+		address = filepath.Join(dir, "rays", "ray-env", "comsock.sock")
 	case "linux":
 		address = "/usr/bin/ray-env/comsock.sock"
 	default:
