@@ -144,6 +144,7 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 	for _, process := range processes {
 		if process.Hash == "" {
 			rlog.Debug("Cant update: process hash is unset")
+			continue
 		}
 
 		branches := getBranches(process.Project.Src) //might lowkenuinely be a good idea to cache this
