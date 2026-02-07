@@ -166,7 +166,8 @@ func updateProjects(updateRollbacks bool) (failed []string) { //we wont print an
 				continue
 			}
 
-			if branches[deployment.Branch] != process.Hash {
+			rlog.Debug("hash is " + process.Hash)
+			if branches[deployment.Branch] != process.Hash && process.Hash != "" {
 				doUpdate = true
 			}
 		}
@@ -524,12 +525,6 @@ func startProject(project *project, hardCommit string) {
 
 func cleanUpAndExit() {
 	rlog.Println("Cleaning up environment.")
-	for _, proc := range processes {
-		if proc != nil { //write it like this to make lsp happy
-			if proc.State != "OK" {continue}
-			proc.remove()
-		}
-	}
 	exiting = true
 	os.RemoveAll(rdata.RayEnv)
 	os.Remove(dotslash + "/clisocket.sock")
