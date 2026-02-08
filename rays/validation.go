@@ -75,7 +75,7 @@ func validateProjectConfig(projectConfig prjcnf.ProjectConfig, project project) 
 			return "Fatal projectconfig error: project that's not a website cannot have a domain defined."
 		}
 
-		if project.PluginImplementation != "" {
+		if projectConfig.PluginImplementation != "" {
 			return "Fatal projectconfig error: project that's not a website cannot implement a plugin."
 		}
 	}

@@ -116,7 +116,9 @@ func SyncToProcessReport(report []process, conn *rlsConnection) {
 		syncedProcesses = append(syncedProcesses, &process)
 
 		if !slices.Contains(unsyncedProcessesIds, process.Id) {
-			go triggerEvent("newProcess", process)
+			if process.Active && process.State == "OK" && !process.Ghost {
+				go triggerEvent("newProcess", process)
+			}
 		}
 	}
 
@@ -174,6 +176,7 @@ func BroadcastAllProcessReports() {
 func StartOutsourcedProjects(rlsConn rlsConnection) {
 	for _, project := range rconf.Projects {
 		if !slices.Contains(project.DeployOn, rlsConn.Name) {continue}
+		rlog.Debug("StartProject:StartOutsourcedProjects")
 		startProject(&project, "")
 	}
 }
@@ -206,6 +209,7 @@ func SendRawRLSPRequest(rawBody string, conn *rlsConnection) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	conn.Health.Healthy = true
 	return response[:len(response) - 1], err
 }
 

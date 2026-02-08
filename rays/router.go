@@ -121,12 +121,6 @@ func startProxy() {
 				}
 			}
 
-			//invoke plugin
-			pluginData, ok := invokePlugin(requestProject)
-			if ok {
-				r.Out.Header.Add("x-ray-plugin-data", pluginData)
-			}
-
 			//get channel
 			channelCookie, channelCookieErr := r.In.Cookie("ray-channel")
 
@@ -253,6 +247,12 @@ func startProxy() {
 				//experimental: new pick algo
 				weights := weightArray(foundProcesses)
 				pick := weightedPick(foundProcesses, weights, ipSum/1020) //the ip sum can be 0-1020
+
+				//invoke plugin
+				pluginData, ok := invokePlugin(pick, *pick.Project)
+				if ok {
+					r.Out.Header.Add("x-ray-plugin-data", pluginData)
+				}
 
 				//default: local server over tcp
 				destUrl := "http://127.0.0.1:" + strconv.Itoa(pick.Port)

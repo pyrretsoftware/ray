@@ -128,6 +128,7 @@ func rayReload(permissons []string) ComError {
 		
 		UpdateConnections()
 		for _, project := range rconf.Projects {
+			rlog.Debug("StartProject::com_reload")
 			startProject(&project, "")
 		}
 		go func ()  {

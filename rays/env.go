@@ -166,6 +166,7 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 		rlog.Debug("old hash is " + process.Hash + " new is " + branches[process.Branch])
 		if branches[process.Branch] != process.Hash && !slices.Contains(alreadyUpdated, process.Project.Name) {
 			rlog.Println("Performing update on " + process.Project.Name)
+			rlog.Debug("StartProject::update")
 			startProject(process.Project, "")
 			alreadyUpdated = append(alreadyUpdated, process.Project.Name)
 		}
@@ -209,6 +210,7 @@ func updateProjectsLegacy(updateRollbacks bool) (failed []string) {
 		}
 		if doUpdate {
 			rlog.Println("Performing update on " + project.Name)
+			rlog.Debug("StartProject::update_legacy")
 			startProject(&project, "")
 		}
 	}
@@ -290,8 +292,8 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			return
 		}
 
-		if project.PluginImplementation == "" {
-			project.PluginImplementation = config.PluginImplementation
+		if project.PluginImplementation != "" {
+			config.PluginImplementation = project.PluginImplementation
 		}
 
 		verr := validateProjectConfig(config, *project)
@@ -542,6 +544,7 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 }
 
 func startProject(project *project, hardCommit string) {
+	rlog.Debug("starting " + project.Name)
 	if strings.Contains(hardCommit, "rollback:") {
 		rlog.Notify("Cannot rollback to a rollback", "warn")
 		return
@@ -590,6 +593,7 @@ func SetupEnv() {
 
 	validateConfig(*rconf)
 	for _, project := range rconf.Projects {
+		rlog.Debug("StartProject::initial")
 		startProject(&project, "")
 	}
 

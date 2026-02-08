@@ -1,0 +1,16 @@
+{
+    "Jobs" : [
+        {
+            "Name" : "ray config",
+            "Base" : "rayconfig",
+            "Path" : "../rays/types.go",
+            "Output" : "rconf.md"
+        },
+        {
+            "Name" : "project config",
+            "Base" : "ProjectConfig",
+            "Path" : "../rays/prjcnf/type.go",
+            "Output" : "pconf.md"
+        }
+    ]
+}

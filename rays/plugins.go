@@ -56,9 +56,15 @@ func generateStatus(project project) string {
 
 // #endregion
 
-func invokePlugin(project project) (string, bool) {
-	if plugins[project.PluginImplementation] != nil {
-		return plugins[project.PluginImplementation](project), true
+func invokePlugin(process process, project project) (string, bool) {
+	if process.ProjectConfig == nil {
+		return "", false
+	}
+
+	if plugins[process.ProjectConfig.PluginImplementation] != nil {
+		return plugins[process.ProjectConfig.PluginImplementation](project), true
+	} else if process.ProjectConfig.PluginImplementation != "" {
+		rlog.Notify("Unknown plugin '" + process.ProjectConfig.PluginImplementation + "'.", "warn")
 	}
 	return "", false
 }

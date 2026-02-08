@@ -7,6 +7,7 @@ func taskAutofix(failedProcess process) { //TODO: add more measures
 	triggerEvent("autofixTasked", failedProcess)
 
 	if commit, ok := latestWorkingCommit[failedProcess.Project.Name]; ok {
+		rlog.Debug("StartProject::autofix")
 		startProject(failedProcess.Project, commit)
 		triggerEvent("autofixMeasureSuccess", "automatic rollback")
 		delete(latestWorkingCommit, failedProcess.Project.Name)
