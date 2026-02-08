@@ -142,6 +142,10 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 	alreadyUpdated := []string{}
 
 	for _, process := range processes {
+		if process.State != "OK" || !process.Active || process.Ghost {
+			continue
+		}
+		
 		if process.Hash == "" {
 			rlog.Debug("Cant update: process hash is unset")
 			continue
@@ -159,8 +163,8 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 			continue
 		}
 
-		rlog.Debug("hash is " + process.Hash)
-		if branches[process.Hash] != process.Hash && !slices.Contains(alreadyUpdated, process.Project.Name) {
+		rlog.Debug("old hash is " + process.Hash + " new is " + branches[process.Branch])
+		if branches[process.Branch] != process.Hash && !slices.Contains(alreadyUpdated, process.Project.Name) {
 			rlog.Println("Performing update on " + process.Project.Name)
 			startProject(process.Project, "")
 			alreadyUpdated = append(alreadyUpdated, process.Project.Name)
