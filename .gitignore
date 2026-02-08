@@ -1,5 +1,6 @@
 _old/
-raydoc/workspace/
+raydoc/raydoc.exe
+raydoc/out
 rays/rayconfig.json
 rays/ray-certs
 rays/projects
