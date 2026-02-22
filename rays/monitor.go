@@ -136,7 +136,7 @@ func ConstructDiscordMessage(okay bool, event string, what string, regarding []s
 
 	catT := `,
 	"image": {
-		"url": "https://cataas.com/cat?width=500&height=500"
+		"url": "https://server.axell.me/dynamic-content/cat-pic"
 	}`
 	if !rconf.Monitoring.CatMode {
 		catT = ""
