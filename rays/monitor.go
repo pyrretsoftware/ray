@@ -164,7 +164,7 @@ func ConstructDiscordMessage(okay bool, event string, what string, regarding []s
 		],
 		"timestamp": "` + rfc3339Time + `",
 		"footer": {
-			"text": "ray monitoring system"
+			"text": "ray ` + Version + `"
 		}` + catT + `
 		}
 	]
