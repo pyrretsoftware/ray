@@ -116,7 +116,7 @@ type DiscordMessage struct {
 
 var LastDiscordMessage *DiscordMessage
 func ConstructDiscordMessage(okay bool, event string, what string, regarding []string, where string, RCOA string) (result string, id string) { 
-	if LastDiscordMessage != nil && event == LastDiscordMessage.Event && what == LastDiscordMessage.What && where == LastDiscordMessage.Where {
+	if LastDiscordMessage != nil && event == LastDiscordMessage.Event && what == LastDiscordMessage.What && where == LastDiscordMessage.Where && LastDiscordMessage.Sent.Add(15 * time.Minute).After(time.Now()) {
 		id = LastDiscordMessage.Id
 		LastDiscordMessage.Regarding = append(LastDiscordMessage.Regarding, regarding...)
 		regarding = LastDiscordMessage.Regarding
@@ -174,6 +174,7 @@ func ConstructDiscordMessage(okay bool, event string, what string, regarding []s
 		What: what,
 		Where: where,
 		Regarding: regarding,
+		Sent: time.Now(),
 		Id: id,
 	}
 	return
