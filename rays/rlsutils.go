@@ -3,30 +3,10 @@ package main
 import (
 	"errors"
 	"net"
-	"strings"
 )
 
 var Connections []*rlsConnection
 var RLSinitialConnectionOver = false
-
-func keyValueParser(content string) string {
-	for _, line := range strings.Split(content, "\n") {
-		keyVal := strings.Split(line, "=")
-		if keyVal[0] == "ip" {
-			return keyVal[1]
-		}
-	}
-	return ""
-}
-
-func plainParser(content string) string { return content }
-
-var lookupParsers []func(content string) string = []func(content string) string{
-	keyValueParser,
-	keyValueParser,
-	plainParser,
-	plainParser,
-}
 
 func getIp() net.IP {
 	interfaces, err := net.InterfaceAddrs()
@@ -50,14 +30,6 @@ func getIp() net.IP {
 		}
 	}
 	return privIp
-}
-
-func addUpIp(ip net.IP) int {
-	var ipSum int
-	for _, b := range ip {
-		ipSum += int(b)
-	}
-	return ipSum
 }
 
 func MatchConnections(remote net.IP) *rlsConnection {

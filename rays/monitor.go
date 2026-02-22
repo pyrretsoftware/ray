@@ -174,6 +174,7 @@ func ConstructDiscordMessage(okay bool, event string, what string, regarding []s
 		What: what,
 		Where: where,
 		Regarding: regarding,
+		Id: id,
 	}
 	return
 }
