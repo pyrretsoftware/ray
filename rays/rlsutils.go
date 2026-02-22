@@ -2,26 +2,12 @@ package main
 
 import (
 	"errors"
-	"io"
 	"net"
-	"net/http"
 	"strings"
 )
 
-type RLSipPair struct {
-	Public net.IP
-	Private net.IP
-}
-
 var Connections []*rlsConnection
 var RLSinitialConnectionOver = false
-
-var lookupServices []string = []string{
-	"http://1.1.1.1/cdn-cgi/trace",
-	"https://www.cloudflare.com/cdn-cgi/trace",
-	"https://checkip.amazonaws.com",
-	"https://whatismyip.akamai.com",
-}
 
 func keyValueParser(content string) string {
 	for _, line := range strings.Split(content, "\n") {
@@ -42,29 +28,7 @@ var lookupParsers []func(content string) string = []func(content string) string{
 	plainParser,
 }
 
-func getIps() RLSipPair {
-	var outIp net.IP
-	for index, service := range lookupServices {
-		resp, err := http.Get(service)
-		if err != nil {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-
-		ba, err := io.ReadAll(resp.Body)
-		if err != nil {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-		lip := lookupParsers[index](string(ba))
-		if lip == "" {
-			rlog.Notify("Failed contacting "+service, "warn")
-			continue
-		}
-
-		outIp = net.ParseIP(strings.ReplaceAll(lip, " ", ""))
-	}
-
+func getIp() net.IP {
 	interfaces, err := net.InterfaceAddrs()
 	rerr.Fatal("Failed grabbing network interfaces.", err)
 
@@ -85,10 +49,7 @@ func getIps() RLSipPair {
 			}
 		}
 	}
-	return RLSipPair{
-		Public:  outIp,
-		Private: privIp,
-	}
+	return privIp
 }
 
 func addUpIp(ip net.IP) int {

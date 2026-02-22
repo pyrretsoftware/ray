@@ -94,7 +94,7 @@ func HandleRLSServerConnection(netConn net.Conn) {
 
 //expiremental: hot reload rls connections
 func UpdateConnections() {
-	localIps := getIps()
+	localIp := getIp()
 	var newConnections []*rlsConnection
 	for _, helperServer := range rconf.RLSConfig.Helpers {
 		var rlsConn rlsConnection
@@ -108,7 +108,7 @@ func UpdateConnections() {
 		}
 
 		rlsConn.IP = remoteIps[0]
-		if rlsConn.IP.IsLoopback() || rlsConn.IP.Equal(localIps.Private) || rlsConn.IP.Equal(localIps.Public) {
+		if rlsConn.IP.IsLoopback() || rlsConn.IP.Equal(localIp) {
 			rlog.Notify("RLS: Cannot specify this server as a helper server, this address points to the local server.", "err")
 			continue
 		}
