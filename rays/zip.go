@@ -41,8 +41,5 @@ func UnzipAt(reader io.ReaderAt, size int64, dest string, allowInsecureZips bool
 			}
 		}
 	}
-
-
-	
 	return nil
 }
