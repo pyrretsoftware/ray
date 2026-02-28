@@ -36,7 +36,7 @@ in this repo:
 
 sister repos:
 - [ray website and docs](https://github.com/pyrretsoftware/raydocs) - hosted at [ray.pyyret.com](https://ray.pyrret.com)
-- [comline package](https://github.com/pyrretsoftware/comline) - go package to interact with comlines
+- [comline](https://github.com/pyrretsoftware/comline) - go package to interact with comlines
 - [modernstatus](https://github.com/pyrretsoftware/modernstatus) - basic looking raystatus implementation
 
 # ray's current stage of development
