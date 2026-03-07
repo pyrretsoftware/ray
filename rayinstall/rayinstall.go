@@ -11,9 +11,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 //go:embed version
@@ -33,13 +30,6 @@ func SizeToString(size int) string {
 
 	return strconv.Itoa(size) + units[sI]
 }
-
-var purpleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
-func purple(str string) string {
-	return purpleStyle.Render(str)
-}
-
-var Grey = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080"))
 
 var fileEnding string
 func main() {
@@ -62,12 +52,15 @@ func main() {
 	fmt.Println()
 
 	fmt.Println("This installer collects some telemetry about your installation such as OS, Processor architecture, version, etc for me to know how to prioritize backwards compatability and get statistics on installations. Once ray server is installed it will never contact the internet without you telling it to.")
-	fmt.Print(purple("Continue?") + " (y/n) ")
-	continueStr := ""
-	_, err := fmt.Scan(&continueStr)
-	if err != nil || (continueStr != "y" && continueStr != "yes")  {
-		fmt.Println("Aborting...")
-		os.Exit(0)
+	
+	if !SkipInteractions {
+		fmt.Print(purple("Continue?") + " (y/n) ")
+		continueStr := ""
+		_, err := fmt.Scan(&continueStr)
+		if err != nil || (continueStr != "y" && continueStr != "yes")  {
+			fmt.Println("Aborting...")
+			os.Exit(0)
+		}
 	}
 
 	fileEnding = ""
@@ -91,40 +84,14 @@ func main() {
 	}
 	fmt.Println("Enviroument is", purple(installLocation))
 
-	_, err = os.Stat(path.Join(installLocation, "rays" + fileEnding))
+	_, err := os.Stat(path.Join(installLocation, "rays" + fileEnding))
 	alreadyInstalled := err == nil
 	installText := "Install"
 	if alreadyInstalled {
 		installText = "Update"
 	}
 
-	fmt.Println()
-	fmt.Println("What would you like to do?")
-	fmt.Println(Grey.Render("←/→ - move • ↵ - select"))
-
-	boxes := tea.NewProgram(box{
-		items: []string{
-			"📦\n" + installText,
-			"🔧\nRepair",
-			"🧹\nUninstall",
-			"💾\nExport",
-		},
-		itemsAvailable: []bool{
-			true,
-			alreadyInstalled,
-			alreadyInstalled,
-			true,
-		},
-	})
-	var boxResultRaw tea.Model
-    if boxResultRaw, err = boxes.Run(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-    }
-	boxResult := boxResultRaw.(box).active
-	if boxResult == -1 {
-		os.Exit(0)
-	}
+	boxResult := PromptAction(installText, alreadyInstalled)
 	
 	fmt.Println("---------------------------------------------------------------")
 	fmt.Println("Rayinstall ready on " + purple(runtime.GOOS + "/" + runtime.GOARCH) + " version " + purple(Version))
@@ -141,6 +108,7 @@ func main() {
 		Collect("uninstallation")
 		Uninstall(installLocation, *forceFlag)
 	case 3:
+		fmt.Println("export")
 		if err := os.WriteFile("./export-rays" + fileEnding, Raysbinary, 0600); err != nil {
 			fmt.Println("Export error: " + err.Error())
 		} else {
@@ -148,7 +116,9 @@ func main() {
 		}
 	} 
 
-	fmt.Println("Press enter to exit...")
-	_inp := ""
-	fmt.Scan(&_inp)
+	if !SkipInteractions {
+		fmt.Println("Press enter to exit...")
+		_inp := ""
+		fmt.Scan(&_inp)		
+	}
 }

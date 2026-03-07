@@ -11,14 +11,16 @@ import (
 
 func Uninstall(installLocation string, forceFlag bool) {
 	fmt.Println("uninstall")
-	fmt.Print("Are you sure you want to uninstall? (y/n)")
-	continueStr := ""
-	_, err := fmt.Scan(&continueStr)
-	if err != nil || (continueStr != "y" && continueStr != "yes")  {
-		fmt.Println("Aborting...")
-		return
+	if !SkipInteractions {
+		fmt.Print("Are you sure you want to uninstall? (y/n)")
+		continueStr := ""
+		_, err := fmt.Scan(&continueStr)
+		if err != nil || (continueStr != "y" && continueStr != "yes")  {
+			fmt.Println("Aborting...")
+			return
+		}
+		fmt.Println()		
 	}
-	fmt.Println()
 
 	fmt.Println("Stopping rays...")
 	StopDaemon(installLocation, forceFlag, false)
@@ -44,7 +46,7 @@ func Uninstall(installLocation string, forceFlag bool) {
 	binPath := filepath.Join(installLocation, "rays" + fileEnding)
 	for {
 	fmt.Println("Removing binary...")
-		err = os.Remove(binPath)
+		err := os.Remove(binPath)
 		if err != nil {
 			fmt.Println("Could not remove binary: " + err.Error() + ", trying again in 3 seconds...")
 			time.Sleep(3 * time.Second)

@@ -15,7 +15,11 @@ import (
 
 func Install(installLocation string, forceFlag bool, repair bool) {
 	if _, err := os.Stat(path.Join(installLocation, "rays"+fileEnding)); err == nil {
-		fmt.Println("update")
+		if repair {
+			fmt.Println("repair")
+		} else {
+			fmt.Println("update")
+		}
 		StopDaemon(installLocation, forceFlag, repair)
 	} else {
 		fmt.Println("install")
