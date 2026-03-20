@@ -32,12 +32,14 @@ func SizeToString(size int) string {
 }
 
 var fileEnding string
+var OptionFlag int
 func main() {
 	Version = strings.ReplaceAll(Version, "\n", "")
 	Version = strings.ReplaceAll(Version, "\r", "")
 	forceFlag := flag.Bool("force", false, "forces update even if ray server appears to be currently running.")
+	optionFlag := flag.Int("option", 0, "option if running in headless mode")
 	flag.Parse()
-
+	OptionFlag = *optionFlag
 
 	fmt.Println(purple(                                                   
 `                                             ▄▄ ▄▄ 
