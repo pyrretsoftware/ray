@@ -13,11 +13,13 @@ func update(cc context.Context, cmd *cli.Command) error {
 	fmt.Println(blueBold.Render("Note:"), "For this command and for automatic updates to work you need to have supplied git http authentication.")
 	loading := spinner.New(spinner.CharSets[14], 100 * time.Millisecond)
 	loading.Start()
+
 	err, resp := makeRequest(cmd.String("remote"), comRequest{
 		Action: "ray:update",
 		Key: cmd.String("hardkey"),
 		Payload: map[string]string{},
 	}, cmd.Bool("debug-local-rays"))
+	if err != nil {return err}
 	loading.Stop()
 
 	failed, ok := resp.Data.Payload.([]any)

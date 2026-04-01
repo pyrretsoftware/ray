@@ -26,7 +26,6 @@ func logs(cc context.Context, cmd *cli.Command) error {
 			"process" : cmd.String("process"),
 		},
 	}, cmd.Bool("debug-local-rays"))
-
 	if err != nil {
 		return err
 	}

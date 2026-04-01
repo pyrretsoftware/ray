@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/urfave/cli/v3"
 )
@@ -17,6 +18,7 @@ func renroll(cc context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("All users will be re-enrolled from now on.")
 
 	return nil
 }

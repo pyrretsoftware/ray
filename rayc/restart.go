@@ -26,6 +26,7 @@ func restart(cc context.Context, cmd *cli.Command) error {
 		Key: cmd.String("hardkey"),
 		Payload: map[string]string{},
 	}, cmd.Bool("debug-local-rays"))
+
 	loading.Stop()
 	return err
 }
