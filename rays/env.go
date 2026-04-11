@@ -461,8 +461,10 @@ func setupLocalProject(project *project, host string, hardCommit string) []proce
 	}
 	rm := func() {
 		for _, proc := range oldprocesses {
-			if !proc.Ghost {
+			if proc.Active && proc.remove != nil {
 				proc.remove()
+			} else {
+				rlog.Notify("Skipping remove, process not active", "warn")
 			}
 		}
 	}
