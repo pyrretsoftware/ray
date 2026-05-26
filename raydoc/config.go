@@ -9,4 +9,5 @@ type Job struct {
 
 type raydocConfig struct {
 	Jobs []Job
+	IndentHeadings string
 }

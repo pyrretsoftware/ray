@@ -12,8 +12,6 @@ import (
 
 //go:embed options/introduction.md
 var DocsIntroduction string
-//go:embed options/dials_indent_prefix.txt
-var IndentHeadings string
 
 var Config raydocConfig
 

@@ -165,7 +165,7 @@ func ProcessJob(outName string, path string, Base string) {
 			processedStruct.Doc = strings.Split(processedStruct.Doc, ";")[1]
 		}
 
-		output += IndentHeadings + "# " + name + "\n"
+		output += Config.IndentHeadings + "# " + name + "\n"
 		output += processedStruct.Doc + "\n"
 		output += "::: details View JSON documentation\n"
 		output += "```json\n"
@@ -196,7 +196,7 @@ func ProcessJob(outName string, path string, Base string) {
 				}
 				typeLink = " [``" + field.Type + "``](#" + typeLink + ")"
 			}
-			output += IndentHeadings + "### " + fieldName + typeLink + "\n"
+			output += Config.IndentHeadings + "### " + fieldName + typeLink + "\n"
 			if strings.Contains(field.Comment, "!DEP") {
 				output += "::: warning\nThis property is deprecated, it's highly recommended to avoid it.\n:::\n"
 			}
