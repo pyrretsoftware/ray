@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -30,9 +31,15 @@ func logs(cc context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	pl, ok := resp.Data.Payload.([]byte)
+	plS, ok := resp.Data.Payload.(string)
 	if !ok {
-		fmt.Println(resp.Data.Payload)
+		fmt.Println(plS)
+		return badFormat()
+	}
+
+	pl, err := base64.StdEncoding.DecodeString(plS)
+	if err != nil {
+		fmt.Println("could not decode b64")
 		return badFormat()
 	}
 
