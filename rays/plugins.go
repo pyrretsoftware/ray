@@ -28,7 +28,7 @@ func generateStatus(project project) string {
 			up = false
 		}
 		listentingOn := `, Listenting on ` + proc.Project.Domain + `, `
-		if proc.ProjectConfig.NonNetworked {
+		if proc.ProjectConfig == nil && proc.ProjectConfig.NonNetworked {
 			listentingOn = ", "
 		}
 
