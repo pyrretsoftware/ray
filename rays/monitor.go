@@ -276,7 +276,31 @@ type discordWebhookResponse struct {
 	Id string `json:"id"`
 }
 
+type monitoringEvent struct {
+	event string
+	params any
+}
+
+var eventQueue = []monitoringEvent{}
+
 func triggerEvent(event string, params any) {
+	eventQueue = append(eventQueue, monitoringEvent{
+		event: event,
+		params: params,
+	})
+}
+
+func StartProcessingEvents() {
+	for {
+		time.Sleep(2 * time.Second)
+		if len(eventQueue) == 0 {continue}
+		event := eventQueue[0]
+		eventQueue = eventQueue[1:]
+		processEvent(event.event, event.params)
+	}
+}
+
+func processEvent(event string, params any) {
 	if !slices.Contains(rconf.Monitoring.TriggerOn, event) && !slices.Contains(rconf.Monitoring.TriggerOn, "all") {return}	
 
 	for _, webhook := range rconf.Monitoring.Webhooks {

@@ -35,6 +35,7 @@ func main() {
 		go triggerEvent("raysStart", nil)
 		rlog.Println("Setting up ray enviroument...")
 		go InitializeRls()
+		go StartProcessingEvents()
 		SetupEnv()
 		startProxy()
 		select {}
