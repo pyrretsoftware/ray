@@ -40,7 +40,7 @@ sister repos:
 - [modernstatus](https://github.com/pyrretsoftware/modernstatus) - basic looking raystatus implementation
 
 # ray's current stage of development
-ray is currently slowly receiving new updates and is not actively developed. The latest release (v3.0.0) is considered to be pretty stable and i currently use it for everything i personally host. It has been tested extensively but remember that ray is a hobby project that comes with no warranty. 
+ray is currently slowly receiving new updates and is not actively developed. The latest release (v3.1.0) is considered to be pretty stable and i currently use it for everything i personally host. It has been tested extensively but remember that ray is a hobby project that comes with no warranty. 
 
 # known issues (in the latest release)
 There are currently no known issues in the latest release.
