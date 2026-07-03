@@ -59,7 +59,7 @@ type project struct {
 	DockerOptions DockerOptions `json:"DockerOptions,omitempty"`
 	//Files declare files that will be created or zips that will be extracted in a deployments directory before the build process. Use for configuration files.
 	Files []ProjectFile
-	//The plugin this project implements, if any. It's HIGHLY recommended to not avoid this and instead use the project config's PluginImplementation field. Setting this field instead of the project config's field works very weird internally and will/can cause quirks especially with RLS. 
+	//The plugin this project implements, if any. It's HIGHLY recommended to avoid this and instead use the project config's PluginImplementation field. Setting this field instead of the project config's field works very weird internally and will/can cause quirks especially with RLS. 
 	PluginImplementation string `json:"PluginImplementation,omitempty"` //!DEP
 	//Special options, used for a couple of different obscure options.
 	Options map[string]string `json:"Options,omitempty"` //!DEP
