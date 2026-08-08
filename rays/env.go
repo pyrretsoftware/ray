@@ -114,7 +114,7 @@ func waitForProcessListen(process *process, udspath string, lenientPorts bool) {
 		//TODO: test this
 		rlog.Notify("The instructed port is occupied, but not by the same process as the deploy step. This can happen if the deploy step spawns new processes.", "warn")
 		if lenientPorts {
-			rlog.Notify("Since lenient ports are enabled, this will not be conisdered a problem.", "warn")
+			rlog.Notify("Since lenient ports are enabled, this will not be considered a problem.", "warn")
 		} else {
 			rlog.Notify("Since lenient ports are disabled, ray will treat this as an error and terminate the application...", "warn")
 			process.remove()
