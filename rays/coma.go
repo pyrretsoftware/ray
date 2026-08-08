@@ -127,10 +127,26 @@ func rayReload(permissons []string) ComError {
 		rconf = &config
 		
 		UpdateConnections()
+		for _, proc := range processes {
+			found := false
+			for _, project := range rconf.Projects {
+				if proc.Project.Name == project.Name {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				rlog.Notify("EXPERIMENTAL: could not find process's project in config during reload, dropping process.", "info")
+				proc.remove()
+			}
+		}
+
 		for _, project := range rconf.Projects {
 			rlog.Debug("StartProject::com_reload")
 			startProject(&project, "")
 		}
+
 		go func ()  {
 			time.Sleep(100 * time.Millisecond) //wait a little to have the current comline request succeed.
 			LoadLines(*rconf)
