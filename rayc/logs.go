@@ -20,13 +20,12 @@ func logs(cc context.Context, cmd *cli.Command) error {
 		return errors.New("Please supply a process id with the --process flag.")
 	}
 
-	err, resp := makeRequest(cmd.String("remote"), comRequest{
+	err, resp := makeRequest(cmd, comRequest{
 		Action: "process:" + ac,
-		Key:    cmd.String("hardkey"),
 		Payload: map[string]string{
 			"process" : cmd.String("process"),
 		},
-	}, cmd.Bool("debug-local-rays"))
+	})
 	if err != nil {
 		return err
 	}

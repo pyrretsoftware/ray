@@ -21,11 +21,10 @@ func restart(cc context.Context, cmd *cli.Command) error {
 	fmt.Println("Alright, attempting to restart rays with systemctl")
 	fmt.Println()
 
-	err, _ := makeRequest(cmd.String("remote"), comRequest{
+	err, _ := makeRequest(cmd, comRequest{
 		Action: "ray:systemctl:restart",
-		Key: cmd.String("hardkey"),
 		Payload: map[string]string{},
-	}, cmd.Bool("debug-local-rays"))
+	})
 
 	loading.Stop()
 	return err

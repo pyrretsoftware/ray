@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/urfave/cli/v3"
 )
 
 var Version = "1.0.0"
 func about(context.Context, *cli.Command) error {
 	fmt.Println(greenBold.Render("rayc"), "is a cli-based ray comline client, it is the offical/recommended way to manage ray servers with comlines.\nIt can talk to comlines using", greenBold.Render("UDS (Unix domain sockets)"), "or", greenBold.Render("HTTP") + ".")
-	fmt.Println("By default, rayc will attempt to connect to a local UDS comline on this machine. You can use the", greenBold.Render("-r flag"), "to specify a remote HTTP comline to use.")
+	fmt.Println("By default, rayc will attempt to connect to a local UDS comline on this machine. You can use the", greenBold.Render("remote"), "command to add, remove and edit configured remote comlines.")
+	fmt.Println("rayc also includes a", greenBold.Render("dev"), "command that allows you to build and run a project from a", greenBold.Render("ray.config.json"), "file")
 	fmt.Println()
 	fmt.Println("Running rayc version", greenBold.Render(Version))
 	return nil
@@ -24,27 +26,61 @@ func isBadFormat(ok bool) {
 		os.Exit(1)
 	}
 }
+var logStyles = map[string]lipgloss.Style{
+	"ERR": redBold,
+	"INFO": blueBold,
+	"DONE": greenBold,
+}
+
+func Log(style string, a any) {
+	fmt.Println("[" + logStyles[style].Render(style) + "]", a)
+}
+
+type LogWriter struct {
+	Style string
+	buf []byte
+}
+
+
+func (lw *LogWriter) Write(p []byte) (n int, err error) {
+	for _, b := range p {
+		if b == '\n' {
+			Log(lw.Style, string(lw.buf))
+			lw.buf = []byte{}
+		} else {
+			lw.buf = append(lw.buf, b)
+		}
+	}
+
+	return len(p), nil
+}
 
 func badFormat() error {
 	fmt.Println(redBold.Render("Comline request returned an unexpected format, try upgrading rayc and rays to their latest versions."))
 	return errors.New("comline request returned unknown format")
 }
 
+var UseAccesible = os.Getenv("ACCESSIBLE") != ""
+
 func main() {
 	cli := &cli.Command{
 		Name: "rayc",
 		Usage: "cli-based ray comline client",
+		Authors: []any{"axell (https://axell.me)"},
+		ExitErrHandler: func(ctx context.Context, c *cli.Command, err error) {
+			Log("ERR", err)
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name: "remote",
 				Value: "",
-				Usage: "a URL to a remote http comline",
+				Usage: "a URL to a remote HTTP comline, or the name of a configured remote comline",
 				Aliases: []string{"r"},
 			},
 			&cli.StringFlag{
 				Name: "hardkey",
 				Value: "",
-				Usage: "a hardcoded key to use for remote comlines",
+				Usage: "a static authentication key",
 				Aliases: []string{"hk"},
 			},
 			&cli.BoolFlag{
@@ -132,6 +168,17 @@ func main() {
 				Action: restart,
 			},
 			{
+				Name: "remote",
+				Usage: "commands to add, remove and edit configured remote servers",
+				Commands: []*cli.Command{
+					{
+						Name: "add",
+						Usage: "adds a remote to remotes.json",
+						Action: AddRemote,
+					},
+				},
+			},
+			{
 				Name: "extensions",
 				Aliases: []string{"ext"},
 				Usage: "lists all active extensions",
@@ -148,6 +195,25 @@ func main() {
 						Usage: "also show ghost processes",
 					},
 				},
+			},
+			{
+				Name: "dev",
+				Usage: "dev allows you to run a ray project locally for development",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name: "port",
+						Aliases: []string{"p"},
+						Value: -1,
+						Usage: "the port to use, by default a sensible available port is selected",
+					},
+				},
+				Arguments: []cli.Argument{
+					&cli.StringArg{
+						Name: "directory",
+						UsageText: "the directory to use, it should be the root of a git repository and have a ray.config.json file",
+					},
+				},
+				Action: dev,
 			},
 		},
 	}

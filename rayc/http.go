@@ -12,6 +12,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"charm.land/huh/v2"
+	"github.com/urfave/cli/v3"
 )
 
 func getClient(rFlag string, unixAddr string) *http.Client {
@@ -29,37 +32,37 @@ func getClient(rFlag string, unixAddr string) *http.Client {
 			return net.Dial(network, addr)
 		},
 	}
-	
+
 	return &http.Client{
 		Transport: transport,
 	}
 }
 
 type comData struct {
-	Payload any `json:"payload,omitempty"`
-	Type string `json:"type,omitempty"`
-	Error string `json:"error,omitempty"`
+	Payload any    `json:"payload,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 type comRequest struct {
-	Action string `json:"action"`
+	Action  string            `json:"action"`
 	Payload map[string]string `json:"payload"`
-	Key string `json:"key"`
+	Key     string            `json:"key"`
 }
 
 type comRayInfo struct {
-	RayVer string `json:"version"`
+	RayVer          string `json:"version"`
 	ProtocolVersion string `json:"protocolVersion"`
 }
 
 type comKeyInfo struct {
-	Holder string `json:"holder"`
+	Holder      string   `json:"holder"`
 	Permissions []string `json:"permissions"`
 }
 
 type comResponse struct {
-	Ray comRayInfo `json:"ray"`
-	Key *comKeyInfo `json:"key"`
-	Data comData `json:"response"`
+	Ray  comRayInfo  `json:"ray"`
+	Key  *comKeyInfo `json:"key"`
+	Data comData     `json:"response"`
 }
 
 func getLocalComlineAddress() (string, error) {
@@ -67,7 +70,9 @@ func getLocalComlineAddress() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
 		dir, err := os.UserHomeDir()
-		if err != nil {return "", err}
+		if err != nil {
+			return "", err
+		}
 
 		address = filepath.Join(dir, "rays", "ray-env", "comsock.sock")
 	case "linux":
@@ -78,51 +83,98 @@ func getLocalComlineAddress() (string, error) {
 	return address, nil
 }
 
-func makeRequest(rFlag string, req comRequest, debug bool) (error, comResponse) {
+func GetKey(auth Authentication) (string, error) {
+	if auth.Type == "hardkey" {
+		return auth.Hardkey, nil
+	}
+	return "", errors.New("unsupported authentication type")
+}
+
+func makeRequest(cmd *cli.Command, req comRequest) (error, comResponse) {
 	localPath, err := getLocalComlineAddress()
-	if err != nil {return err, comResponse{}}
-	
-	if debug {
+	if err != nil {
+		return err, comResponse{}
+	}
+
+	if cmd.Bool("debug-local-rays") {
 		localPath = "../rays/ray-env/comsock.sock"
 	}
-	c := getClient(rFlag, localPath)
-	if rFlag == "" {
-		rFlag = "http://how-can-you-see-this"
-		if req.Key == "" {
-			req.Key = "ext:Rayc;This extension is used by rayc for local communications;https://pkgs.pyrret.com/rayc"
+
+	target := cmd.String("remote")
+	if target == "" {
+		remotes, err := GetRemotes()
+		if err != nil {
+			return err, comResponse{}
 		}
+
+		remotes = append([]Remote{
+			{
+				Name: "Local server",
+				URL: "http://how-can-you-see-this",
+				Authentication: Authentication{
+					Type: "hardkey",
+					Hardkey: "ext:Rayc;This extension is used by rayc for local communications;https://pkgs.pyrret.com/rayc",
+				},
+			},
+		}, remotes...)
+
+		options := []huh.Option[Remote]{}
+
+		for _, remote := range remotes {
+			options = append(options, huh.Option[Remote]{
+				Key:   remote.Name,
+				Value: remote,
+			})
+		}
+
+		var selected Remote
+		if len(remotes) != 0 {
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[Remote]().
+						Title("Choose a comline:").
+						Options(options...).
+						Value(&selected),
+				),
+			).WithAccessible(UseAccesible).Run()
+
+			if err != nil {
+				return err, comResponse{}
+			}
+		}
+		target = selected.URL
+		key, err := GetKey(selected.Authentication)
+		if err != nil {
+			return err, comResponse{}
+		}
+		req.Key = key
+
+
 	}
+	c := getClient(target, localPath)
 
 	ba, err := json.Marshal(req)
 	if err != nil {
-		fmt.Println(redBold.Render("formatting request failed,"), "see the info below:")
-		fmt.Println(err)
 		return err, comResponse{}
 	}
-	resp, err := c.Post(rFlag, "application/json", bytes.NewReader(ba))
+	resp, err := c.Post(target, "application/json", bytes.NewReader(ba))
 	if err != nil {
-		fmt.Println(redBold.Render("Sending request failed,"), "is the comline online?")
 		return err, comResponse{}
 	}
 
 	rba, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(redBold.Render("Failed receiving response from comline,"), "do you have a flaky connection?")
 		return err, comResponse{}
 	}
 
 	var response comResponse
 	jerr := json.Unmarshal(rba, &response)
 	if jerr != nil {
-		fmt.Println(redBold.Render("Invalid response from comline,"), "see the info below:")
-		fmt.Println(jerr)
 		return jerr, comResponse{}
 	}
 
 	if resp.StatusCode != 200 {
-		fmt.Println(redBold.Render("Comline reported an error,"), "see the info below:")
-		fmt.Println(response.Data.Error)
-		return errors.New("comline reported error"), comResponse{}
+		return errors.New(response.Data.Error), comResponse{}
 	}
 	return nil, response
 }

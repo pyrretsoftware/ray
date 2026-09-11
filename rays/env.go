@@ -296,11 +296,18 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			config.PluginImplementation = project.PluginImplementation
 		}
 
-		verr := validateProjectConfig(config, *project)
+		verr := prjcnf.ValidateProjectConfig(config)
 		if verr != "" {
 			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr)
 			return
 		}
+
+		verr = validateProjectDomain(config, *project)
+		if verr != "" {
+			stepZeroLogBuffer.WriteString("There is an issue with your project config: " + verr)
+			return
+		}
+
 		process.ProjectConfig = &config
 
 		err = AddFiles(project.Files, dir, &stepZeroLogBuffer)
@@ -326,13 +333,13 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 	for stepIndex, step := range config.Pipeline {
 		var logBuffer strings.Builder //implements io.Writer
 
-		BuiltIntool := builtIn(step)
+		validateBuiltIns(step.Tool, step.Type)
 		commandDir := dir
 		if step.Options.Dir != "" {
 			commandDir = path.Join(commandDir, step.Options.Dir)
 		}
 
-		if BuiltIntool == "rayserve" && !config.NonNetworked {
+		if step.Tool == "rayserve" && !config.NonNetworked {
 			(*swapfunction)()
 			staticServer(commandDir, process.Port, &process, step.Options.RayserveRedirects, step.Options.RayserveDisableDirListing)
 			finishLogSection(&logBuffer, &logFile, stepIndex, step, true)

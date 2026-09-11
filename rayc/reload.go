@@ -15,12 +15,10 @@ func reload(cc context.Context, cmd *cli.Command) error {
 	loading := spinner.New(spinner.CharSets[14], 100 * time.Millisecond)
 	loading.Start()
 
-	err, _ := makeRequest(cmd.String("remote"), comRequest{
+	err, _ := makeRequest(cmd, comRequest{
 		Action: "ray:reload",
-		Key: cmd.String("hardkey"),
 		Payload: map[string]string{},
-	}, cmd.Bool("debug-local-rays"))
-	if err != nil {return err}
+	})
 
 	loading.Stop()
 	fmt.Println()

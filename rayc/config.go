@@ -12,10 +12,10 @@ import (
 )
 
 func config(cc context.Context, cmd *cli.Command) error {
-	err, resp := makeRequest(cmd.String("remote"), comRequest{
+	err, resp := makeRequest(cmd, comRequest{
 		Action: "config:readraw",
-		Key: cmd.String("hardkey"),
-	}, cmd.Bool("debug-local-rays"))
+	})
+
 	if err != nil {
 		return err
 	}
@@ -65,14 +65,15 @@ func config(cc context.Context, cmd *cli.Command) error {
 		return errors.New("read temporary file error")
 	}
 
-	err, _ = makeRequest(cmd.String("remote"), comRequest{
+	err, _ = makeRequest(cmd, comRequest{
 		Action: "config:write",
-		Key: cmd.String("hardkey"),
 		Payload: map[string]string{
 			"config" : base64.StdEncoding.EncodeToString(newconfig),
 		},
-	}, cmd.Bool("debug-local-rays"))
-	if err != nil {return errors.New("req error")}
+	})
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("Remember, you'll also need to run " + greenBold.Render("rayc reload") + " for the changes to take effect!")
 	return os.Remove(f.Name())

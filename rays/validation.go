@@ -12,6 +12,12 @@ var deploymentTypes = []string{
 	"hidden",
 }
 
+func validateBuiltIns(name string, stepType string) {
+	if name == "rayserve" && stepType != "deploy" {
+		rlog.Fatal("rayserve always needs to be step type deploy!")
+	}
+}
+
 func validateConfig(config rayconfig) {
 	rlog.Debug("Validating configuration file...")
 	if !rconf.RLSConfig.Enabled && len(rconf.RLSConfig.Helpers) > 0 {
@@ -69,34 +75,9 @@ func validateDeployments(deployments []deployment) {
 	}
 }
 
-func validateProjectConfig(projectConfig prjcnf.ProjectConfig, project project) string {
-	if projectConfig.NonNetworked {
-		if project.Domain != "" {
-			return "Fatal projectconfig error: project that's not a website cannot have a domain defined."
-		}
-
-		if projectConfig.PluginImplementation != "" {
-			return "Fatal projectconfig error: project that's not a website cannot implement a plugin."
-		}
-	}
-
-	if projectConfig.Pipeline[len(projectConfig.Pipeline)-1].Type != "deploy" {
-		return "Fatal projectconfig error: last step in deployment pipeline needs to be of type deploy."
-	}
-
-	alwaysRanDeploySteps := 0
-	for _, step := range projectConfig.Pipeline {
-		if step.Type == "deploy" && !step.Options.IfAvailable {
-			alwaysRanDeploySteps += 1
-		}
-
-		if step.Type != "deploy" && step.Type != "build" {
-			return "Fatal projectconfig error: only valid pipeline step types are 'deploy' and 'build'."
-		}
-	}
-
-	if alwaysRanDeploySteps > 1 {
-		return "Fatal projectconfig error: project config contains multiple pipeline steps of type deploy that will always be run."
+func validateProjectDomain(config prjcnf.ProjectConfig, project project) string {
+	if config.NonNetworked && project.Domain != "" {
+		return "Fatal projectconfig error: project that's not a website cannot have a domain defined."
 	}
 	return ""
 }

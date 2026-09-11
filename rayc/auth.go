@@ -10,11 +10,13 @@ import (
 
 
 func auth(cc context.Context, cmd *cli.Command) error {
-	err, resp := makeRequest(cmd.String("remote"), comRequest{
+	err, resp := makeRequest(cmd, comRequest{
 		Action: "channel:auth",
-		Key: cmd.String("hardkey"),
-	}, cmd.Bool("debug-local-rays"))
-	if err != nil {return err}
+	})
+
+	if err != nil {
+		return err
+	}
 
 	key, ok := resp.Data.Payload.(string)
 	if !ok {

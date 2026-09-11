@@ -1,0 +1,18 @@
+[
+    {
+        "Name": "Laptop server",
+        "URL": "https://raycom.axell.me",
+        "Authentication": {
+            "Type": "hardkey",
+            "Hardkey": "axpafrfr1234"
+        }
+    },
+    {
+        "Name": "",
+        "URL": "",
+        "Authentication": {
+            "Type": "hardkey",
+            "Hardkey": ""
+        }
+    }
+]
