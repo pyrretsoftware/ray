@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/rays/prjcnf"
+	"pyrret.com/pkgs/prjcnf"
 )
 
 //Channel;A channel/deployment is a version of a project based on a git branch. It is sometimes used synonymously with branch.

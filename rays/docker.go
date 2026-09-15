@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/rays/prjcnf"
+	"pyrret.com/pkgs/prjcnf"
 )
 
 func deployLocalDockerProcess(project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {

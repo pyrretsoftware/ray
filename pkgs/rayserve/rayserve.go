@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/rays/prjcnf"
+	"pyrret.com/pkgs/prjcnf"
 )
 
 func RayserveFileServer(rootDir string, notFoundPage []byte, listingsDisabled bool, redirects []prjcnf.RayserveRedirect, rayVersion string) http.HandlerFunc {

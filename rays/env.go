@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/rays/prjcnf"
+	"pyrret.com/pkgs/prjcnf"
 )
 
 var exiting = false

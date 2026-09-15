@@ -15,8 +15,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/urfave/cli/v3"
-	"pyrret.com/rays/prjcnf"
-	"pyrret.com/rays/rayserve"
+	"pyrret.com/pkgs/prjcnf"
+	"pyrret.com/pkgs/rayserve"
 )
 
 func initEnv(wd string) (env string, err error) {

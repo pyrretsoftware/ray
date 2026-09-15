@@ -6,8 +6,8 @@ import (
 	"path"
 	"strconv"
 
-	"pyrret.com/rays/prjcnf"
-	"pyrret.com/rays/rayserve"
+	"pyrret.com/pkgs/prjcnf"
+	"pyrret.com/pkgs/rayserve"
 )
 
 func serveStaticServer(srv *http.Server, process *process) {
