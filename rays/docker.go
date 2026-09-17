@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/pkgs/prjcnf"
+	"github.com/pyrretsoftware/ray/shared/prjcnf"
 )
 
 func deployLocalDockerProcess(project *project, swapfunction *func(), branch string, branchHash string, logDir string, envDir string, procId string, RLSHost string) {
-	rlog.BuildNotify("Attempting to launch "+project.Name+" (deployment " + branch  + ") using Docker", "info")
+	rlog.BuildNotify("Attempting to launch "+project.Name+" (deployment "+branch+") using Docker", "info")
 	var process process
 
 	process.Branch = branch
@@ -34,7 +34,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		process.RLSInfo.Type = "adm"
 	}
 
-	logPath := filepath.Join(logDir, "log-" + getUuid() + ".json")
+	logPath := filepath.Join(logDir, "log-"+getUuid()+".json")
 	var logFile logFile
 	process.LogFile = logPath
 
@@ -45,7 +45,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	}
 
 	//pull image
-	rlog.BuildNotify("Now pulling container image '"+project.Src+"' for " + project.Name, "info")
+	rlog.BuildNotify("Now pulling container image '"+project.Src+"' for "+project.Name, "info")
 	var pullLogBuffer strings.Builder
 	pull := exec.Command("docker", "pull", project.Src)
 	pull.Stdout = &pullLogBuffer
@@ -56,17 +56,16 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	if pullError != nil {
 		process.Active = false
 		process.State = pullLogBuffer.String() + ", " + pullError.Error()
-		rlog.BuildNotify("Failed pulling image '"+project.Src+" for " + project.Name, "err")
+		rlog.BuildNotify("Failed pulling image '"+project.Src+" for "+project.Name, "err")
 		rlog.BuildNotify(pullLogBuffer.String(), "err")
-		rlog.BuildNotify("OS Error:" + pullError.Error(), "err")
+		rlog.BuildNotify("OS Error:"+pullError.Error(), "err")
 
 		finishProcess(logFile, &process, *project, branch, logPath)
 		processes = append(processes, &process)
 		return
 	} else {
-		rlog.BuildNotify("Successfully pulled image for " + project.Name, "done")
+		rlog.BuildNotify("Successfully pulled image for "+project.Name, "done")
 	}
-
 
 	//add files
 	var addFilesLogBuffer strings.Builder
@@ -82,9 +81,11 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		addFilesLogBuffer.WriteString("All files to be added have been added.")
 	}
 	finishLogSection(&addFilesLogBuffer, &logFile, -1, prjcnf.PipelineStep{Tool: "Add files"}, err == nil)
-	if err != nil {return}
+	if err != nil {
+		return
+	}
 
-	var deployLogBuffer strings.Builder 
+	var deployLogBuffer strings.Builder
 
 	envs := project.EnvVars
 	if envs == nil {
@@ -99,11 +100,11 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	}
 
 	if !project.DockerOptions.NonNetworked {
-		args = append(args, "-p", strconv.Itoa(process.Port) + ":" + strconv.Itoa(project.DockerOptions.ContainerPort))
+		args = append(args, "-p", strconv.Itoa(process.Port)+":"+strconv.Itoa(project.DockerOptions.ContainerPort))
 	}
 
 	for source, dest := range project.DockerOptions.Volumes {
-		args = append(args, "-v", filepath.Join(envDir, source) + ":" + dest)
+		args = append(args, "-v", filepath.Join(envDir, source)+":"+dest)
 	}
 
 	args = append(args, "--init", "--name", containerName)
@@ -112,7 +113,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 	cmd := exec.Command("docker", args...)
 	cmd.Env = cmd.Environ()
 	for key, val := range envs {
-		cmd.Env = append(cmd.Env, key + "=" + val)
+		cmd.Env = append(cmd.Env, key+"="+val)
 	}
 
 	cmd.Stdout = &deployLogBuffer
@@ -127,7 +128,6 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 			rlog.Notify(string(ba), "err")
 		}
 	}
-		
 
 	//TODO: write to a file for deploy steps, keeping everything the program logs in a buffer in memory is a terrible idea.
 	cmd.Stdout = &deployLogBuffer
@@ -147,7 +147,7 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	buildErr := func (message string)  {
+	buildErr := func(message string) {
 		rlog.BuildNotify(message, "err")
 		deployLogBuffer.Write([]byte(message + "\n"))
 	}
@@ -171,14 +171,14 @@ func deployLocalDockerProcess(project *project, swapfunction *func(), branch str
 		process.Active = false
 		finishLogSection(&deployLogBuffer, &logFile, 0, prjcnf.PipelineStep{Tool: "Running container (deploy step)"}, false)
 	} else {
-		rlog.BuildNotify("Successfully started container '" + project.Src + "' for " +project.Name+" (deployment " + branch  + ")", "done")
+		rlog.BuildNotify("Successfully started container '"+project.Src+"' for "+project.Name+" (deployment "+branch+")", "done")
 
 		process.Processes = append(process.Processes, cmd.Process.Pid)
 		process.log = &deployLogBuffer
 		go trackProcess(cmd, &process, &deployLogBuffer)
-			//go waitForProcessListen(&process, "DOCKER", true) //maybe not use this for now
+		//go waitForProcessListen(&process, "DOCKER", true) //maybe not use this for now
 	}
-	
+
 	finishProcess(logFile, &process, *project, branch, logPath)
 	processes = append(processes, &process)
 }

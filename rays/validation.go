@@ -3,7 +3,7 @@ package main
 import (
 	"slices"
 
-	"pyrret.com/pkgs/prjcnf"
+	"github.com/pyrretsoftware/ray/shared/prjcnf"
 )
 
 var deploymentTypes = []string{

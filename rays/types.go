@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/pkgs/prjcnf"
+	"github.com/pyrretsoftware/ray/shared/prjcnf"
 )
 
-//Channel;A channel/deployment is a version of a project based on a git branch. It is sometimes used synonymously with branch.
+// Channel;A channel/deployment is a version of a project based on a git branch. It is sometimes used synonymously with branch.
 type deployment struct {
 	//Git branch to base this deployment/channel on. This is also used as the channel's name.
 	Branch string
@@ -19,7 +19,7 @@ type deployment struct {
 	Enrollment float64
 }
 
-//File;Ray Files are files that you can define in your config that will be placed in each deployments directory. This can be used for configuration files among other things.
+// File;Ray Files are files that you can define in your config that will be placed in each deployments directory. This can be used for configuration files among other things.
 type ProjectFile struct {
 	//Where the file should be placed relative to the deployment directory. When Type is set to "zip", this is the path of the directory the files will be unzipped to.
 	Path string
@@ -29,7 +29,7 @@ type ProjectFile struct {
 	Blob []byte
 }
 
-//Docker Options;Special docker-specific options for DCM
+// Docker Options;Special docker-specific options for DCM
 type DockerOptions struct {
 	//Does the same thing as ProjectConfig's NonNetworked, that is disable ray router for this project and do not expect it to listen on RAY_PORT or RAY_SOCK_PATH
 	NonNetworked bool `json:"NonNetworked,omitempty"`
@@ -39,19 +39,19 @@ type DockerOptions struct {
 	Volumes map[string]string
 }
 
-//Project;A project
+// Project;A project
 type project struct {
 	//Url of the git repository of the project (eg. https://github.com/pyrretsoftware/ray) or the image refrence if using DCM (eg. glanceapp/glance)
-	Src string 
+	Src string
 	//Unique name of the project
-	Name string 
+	Name string
 	//Enviroument variables, use for secrets or simple configuration.
-	EnvVars map[string]string `json:"EnvVars,omitempty"` 
+	EnvVars map[string]string `json:"EnvVars,omitempty"`
 	//Host where your project will be accessible at, matched by ray router against the http Host header. Do not set if NonNetworked.
 	Domain string
 	//List of deployments. [See this page.](https://ray.pyrret.com/guides/deploying-a-project/more.html#different-deployments)
 	Deployments []deployment `json:"Deployments,omitempty"`
-	//Type of the production deployment, works the same as deployment.Type. 
+	//Type of the production deployment, works the same as deployment.Type.
 	ProdType string `json:"ProdType,omitempty"`
 	//Special compatibility mode for this project. Enum, may be set to "docker". Do not set if using standard ray build system.
 	CompatibilityMode string `json:"CompatibilityMode,omitempty"`
@@ -59,33 +59,33 @@ type project struct {
 	DockerOptions DockerOptions `json:"DockerOptions,omitempty"`
 	//Files declare files that will be created or zips that will be extracted in a deployments directory before the build process. Use for configuration files.
 	Files []ProjectFile
-	//The plugin this project implements, if any. It's HIGHLY recommended to avoid this and instead use the project config's PluginImplementation field. Setting this field instead of the project config's field works very weird internally and will/can cause quirks especially with RLS. 
+	//The plugin this project implements, if any. It's HIGHLY recommended to avoid this and instead use the project config's PluginImplementation field. Setting this field instead of the project config's field works very weird internally and will/can cause quirks especially with RLS.
 	PluginImplementation string `json:"PluginImplementation,omitempty"` //!DEP
 	//Special options, used for a couple of different obscure options.
 	Options map[string]string `json:"Options,omitempty"` //!DEP
 	//RLS servers to deploy this project onto. Use "local" for the local server. If left blank, it is set to ["local"].
-	DeployOn []string 
+	DeployOn []string
 	//Tells ray router to proxy request to this project somewhere else (eg. localhost:3000).
 	Middleware string `json:"Middleware,omitempty"`
 	//Any user enrolled into a channel before this timestamp will be renrolled into a new channel. Unix time.
-	ForcedRenrollment int64 
+	ForcedRenrollment int64
 }
 
 type raydata struct {
 	RayEnv string
 }
 
-//TLS Config;TLS configuration options
+// TLS Config;TLS configuration options
 type tlsConfig struct {
 	//Configures a provider. Enum, possile vals are "letsencrypt" and "custom". By setting to letsencrypt, you agree to [their TOS](https://letsencrypt.org/documents/LE-SA-v1.6-August-18-2025.pdf)
-	Provider string `json:"Provider,omitempty"` 
+	Provider string `json:"Provider,omitempty"`
 	//The certificate in PEM format. Only used when provider is custom.
 	Certificate string
 	//The private key in PEM format. Only used when provider is custom.
 	PrivateKey string
 }
 
-//Git Authentication Config;Used to configure HTTP git authentication for automatic updates
+// Git Authentication Config;Used to configure HTTP git authentication for automatic updates
 type gitAuth struct {
 	//HTTP basic auth username (use your username for github)
 	Username string `json:"Username,omitempty"`
@@ -95,36 +95,37 @@ type gitAuth struct {
 
 type Extension struct {
 	Description string
-	URL string
-	ImageBlob string
+	URL         string
+	ImageBlob   string
 }
 
-//packets not the right terminology bla bla bla it sounds tuff and "rlsp request" refers to smth else
+// packets not the right terminology bla bla bla it sounds tuff and "rlsp request" refers to smth else
 type RLSPPacket struct {
-	Action string
-	Project project //only used when action is "startProject"
-	ProjectHardCommit string //only used when action is "startProject"
-	RemoveProcessTarget string //only used when action is "removeProcess"
-	Processes []process
+	Action              string
+	Project             project //only used when action is "startProject"
+	ProjectHardCommit   string  //only used when action is "startProject"
+	RemoveProcessTarget string  //only used when action is "removeProcess"
+	Processes           []process
 }
 
-//more stuff will be added to this...
+// more stuff will be added to this...
 type rlsHealthReport struct {
-	Issued time.Time
-	Received time.Time
+	Issued     time.Time
+	Received   time.Time
 	RayVersion string
-	GoVersion string
+	GoVersion  string
 }
 type rlsConnectionHealth struct {
 	Healthy bool
-	Report rlsHealthReport
+	Report  rlsHealthReport
 }
 type rlsConnection struct {
-	IP net.IP
-	Name string
+	IP     net.IP
+	Name   string
 	Health rlsConnectionHealth
 }
-//RLS Helper server;For defining RLS Servers. See [this guide](https://ray.pyrret.com/guides/rls/)
+
+// RLS Helper server;For defining RLS Servers. See [this guide](https://ray.pyrret.com/guides/rls/)
 type helperServer struct {
 	//Where to connect for this server. Can be a private/public ip or a hostname/domain that resolves to an ip.
 	Host string `json:"Host,omitempty"`
@@ -134,7 +135,7 @@ type helperServer struct {
 	Weight float64 `json:"Weight,omitempty"`
 }
 
-//RLS config;For configuring RLS. See [this guide](https://ray.pyrret.com/guides/rls/)
+// RLS config;For configuring RLS. See [this guide](https://ray.pyrret.com/guides/rls/)
 type rlsConfig struct {
 	//Helper servers
 	Helpers []helperServer `json:"Helpers,omitempty"`
@@ -142,14 +143,15 @@ type rlsConfig struct {
 	Enabled bool `json:"Enabled,omitempty"`
 }
 
-//Webhook;A monitoring webhook
+// Webhook;A monitoring webhook
 type webhook struct {
 	//Type of webhook. enum, either "discord", "slack" or "generic"
 	Type string `json:"Type,omitempty"`
 	//Webhook url
 	Url string `json:"Url,omitempty"`
 }
-//Monitoring config;Monitoring notifies you when things happen to your servers
+
+// Monitoring config;Monitoring notifies you when things happen to your servers
 type monitoringConfig struct {
 	//List of monitoring webhooks
 	Webhooks []webhook `json:"Webhooks,omitempty"`
@@ -159,7 +161,7 @@ type monitoringConfig struct {
 	CatMode bool
 }
 
-//Key;Comline authentication key
+// Key;Comline authentication key
 type Key struct {
 	//For features coming later, always set to 'hardcode' for now
 	Type string `json:"Type,omitempty"`
@@ -167,10 +169,11 @@ type Key struct {
 	Key string `json:"Key,omitempty"`
 	//List of permissons this key has. The key defaults to no permissons. If this includes "special:all", all permsissons are given, but remember [the principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege)
 	Permissons []string `json:"Permissons,omitempty"`
-	//A display name for the key, like who or what uses it.  
+	//A display name for the key, like who or what uses it.
 	DisplayName string `json:"DisplayName,omitempty"`
 }
-//Comline configuration;Comlines allow you to access a ray server over the internet or from another program on the server.
+
+// Comline configuration;Comlines allow you to access a ray server over the internet or from another program on the server.
 type ComConfig struct {
 	//Comlines of this server
 	Lines []HTTPComLine `json:"Lines,omitempty"`
@@ -178,7 +181,7 @@ type ComConfig struct {
 	Keys []Key `json:"Keys,omitempty"`
 }
 
-//Comline;Comlines allow you to access a ray server over the internet or from another program on the server.
+// Comline;Comlines allow you to access a ray server over the internet or from another program on the server.
 type HTTPComLine struct {
 	//The host (works the same as a project's domain field) for comlines over the internet or the file path for unix sockets
 	Host string
@@ -186,101 +189,101 @@ type HTTPComLine struct {
 	Type string
 	//Whether or not the comline accepts extensions, this only has effect on unix comlines for security reasons.
 	ExtensionsEnabled bool
-	handler func(w http.ResponseWriter, r *http.Request)
-	close func() error
+	handler           func(w http.ResponseWriter, r *http.Request)
+	close             func() error
 }
 
-//Ray Config;The thing you configure ray with, the file is usually located at /usr/bin/ray-env/rayconfig.json on Linux.
+// Ray Config;The thing you configure ray with, the file is usually located at /usr/bin/ray-env/rayconfig.json on Linux.
 type rayconfig struct {
 	//This ray servers projects
-    Projects []project `json:"Projects,omitempty"`
+	Projects []project `json:"Projects,omitempty"`
 	//Configuration for TLS (HTTPS)
-    TLS tlsConfig `json:"TLS,omitempty"`
+	TLS tlsConfig `json:"TLS,omitempty"`
 	//Enables rayutil. See [this page](https://ray.pyrret.com/guides/deploying-a-project/more.html#rayutil)
-    EnableRayUtil bool `json:"EnableRayUtil,omitempty"`
+	EnableRayUtil bool `json:"EnableRayUtil,omitempty"`
 	//Git Authentication Config
-    GitAuth gitAuth `json:"GitAuth,omitempty"`
+	GitAuth gitAuth `json:"GitAuth,omitempty"`
 	//RLS Config. See [this guide](https://ray.pyrret.com/guides/rls/)
-    RLSConfig rlsConfig `json:"RLSConfig,omitempty"`
+	RLSConfig rlsConfig `json:"RLSConfig,omitempty"`
 	//Whether or not to disable ray's catastrophe prevention mechanism autofix,
-    AutofixDisabled bool `json:"AutofixDisabled,omitempty"`
+	AutofixDisabled bool `json:"AutofixDisabled,omitempty"`
 	//Monitoring conifg
-    Monitoring monitoringConfig `json:"Monitoring,omitempty"`
+	Monitoring monitoringConfig `json:"Monitoring,omitempty"`
 	//Comline config
-    Com ComConfig `json:"Com,omitempty"`
-    //MetricsEnabled bool //maybe
+	Com ComConfig `json:"Com,omitempty"`
+	//MetricsEnabled bool //maybe
 }
 
 type statusItem struct {
 	Running bool
-	Text string
+	Text    string
 	Subtext string
 }
 
 type rayStatus struct {
-	Name string
-	Desc string
+	Name         string
+	Desc         string
 	EverythingUp bool
-	Processes []statusItem
+	Processes    []statusItem
 }
 
 type rlsInfo struct {
 	Type string //enum, either local, outsourced or adm (for administered)
-	IP string
+	IP   string
 }
 type process struct {
-	Project *project
-	ProjectConfig *prjcnf.ProjectConfig
-	Env string
-	Ghost bool
-	Port int
+	Project        *project
+	ProjectConfig  *prjcnf.ProjectConfig
+	Env            string
+	Ghost          bool
+	Port           int
 	UnixSocketPath string //if this is assigned, it overrides Port
-	Processes []int
-	Active bool
-	State string
-	remove func()
-	Branch string
-	Hash string
-	LogFile string
-	Id string
-	log *strings.Builder
-	BuildLog []byte
-	RLSInfo rlsInfo
+	Processes      []int
+	Active         bool
+	State          string
+	remove         func()
+	Branch         string
+	Hash           string
+	LogFile        string
+	Id             string
+	log            *strings.Builder
+	BuildLog       []byte
+	RLSInfo        rlsInfo
 }
 type logFile struct {
 	Success bool
-	Name string
-	Steps []logSection
+	Name    string
+	Steps   []logSection
 }
 type logSection struct {
-	Name string
-	Log string
+	Name    string
+	Log     string
 	Success bool
 }
 
 type comData struct {
-	Payload any `json:"payload,omitempty"`
-	Type string `json:"type,omitempty"`
-	Error string `json:"error,omitempty"`
+	Payload any    `json:"payload,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 type comRequest struct {
-	Action string `json:"action"`
+	Action  string            `json:"action"`
 	Payload map[string]string `json:"payload"`
-	Key string `json:"key"`
+	Key     string            `json:"key"`
 }
 
 type comRayInfo struct {
-	RayVer string `json:"version"`
+	RayVer          string `json:"version"`
 	ProtocolVersion string `json:"protocolVersion"`
 }
 
 type comKeyInfo struct {
-	Holder string `json:"holder"`
+	Holder      string   `json:"holder"`
 	Permissions []string `json:"permissions"`
 }
 
 type comResponse struct {
-	Ray comRayInfo `json:"ray"`
-	Key *comKeyInfo `json:"key"`
-	Data comData `json:"response"`
+	Ray  comRayInfo  `json:"ray"`
+	Key  *comKeyInfo `json:"key"`
+	Data comData     `json:"response"`
 }

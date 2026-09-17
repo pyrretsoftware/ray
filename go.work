@@ -1,7 +1,7 @@
 go 1.25.9
 
 use (
-	./pkgs
+	./shared
 	./rayc
 	./raydoc
 	./rayinstall

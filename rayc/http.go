@@ -113,7 +113,7 @@ func makeRequest(cmd *cli.Command, req comRequest) (error, comResponse) {
 				URL: "http://how-can-you-see-this",
 				Authentication: Authentication{
 					Type: "hardkey",
-					Hardkey: "ext:Rayc;This extension is used by rayc for local communications;https://pkgs.pyrret.com/rayc",
+					Hardkey: "ext:Rayc;This extension is used by rayc for local communications;https://ray.pyrret.com",
 				},
 			},
 		}, remotes...)

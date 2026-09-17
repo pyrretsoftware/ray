@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/pyrretsoftware/ray/shared/prjcnf"
+	"github.com/pyrretsoftware/ray/shared/rayserve"
 	"github.com/urfave/cli/v3"
-	"pyrret.com/pkgs/prjcnf"
-	"pyrret.com/pkgs/rayserve"
 )
 
 func initEnv(wd string) (env string, err error) {
@@ -66,14 +66,14 @@ func initEnv(wd string) (env string, err error) {
 func pickPort() (string, error) {
 	ports := []string{"7292", "3000", "8080", "3001", "5678", "5000", "8000"} //7292 for telephone keypad -> RAYC
 	for _, v := range ports {
-		l, err := net.Listen("tcp", ":" + v)
+		l, err := net.Listen("tcp", ":"+v)
 		if err != nil {
-			Log("INFO", "port " + v + "busy: " + err.Error() + ", trying another port")
+			Log("INFO", "port "+v+"busy: "+err.Error()+", trying another port")
 			continue
 		}
 
 		l.Close()
-		Log("INFO", "port " + v + " ok")
+		Log("INFO", "port "+v+" ok")
 		return v, nil
 	}
 
@@ -125,10 +125,10 @@ func deployEnv(env string, cmd *cli.Command) (error, string) {
 				Log("INFO", "No 404 page specified for rayserve")
 				notFoundPage = []byte("Rayserve: 404 page not found")
 			}
-			
-			handler := rayserve.RayserveFileServer(commandDir, notFoundPage, step.Options.RayserveDisableDirListing, step.Options.RayserveRedirects, "rayc dev " + Version)
-			go func ()  {
-				Log("ERR", http.ListenAndServe(":" + port, handler))
+
+			handler := rayserve.RayserveFileServer(commandDir, notFoundPage, step.Options.RayserveDisableDirListing, step.Options.RayserveRedirects, "rayc dev "+Version)
+			go func() {
+				Log("ERR", http.ListenAndServe(":"+port, handler))
 			}()
 			break
 		}
@@ -137,7 +137,7 @@ func deployEnv(env string, cmd *cli.Command) (error, string) {
 			_, errLocal := os.Stat(filepath.Join(commandDir, step.Tool))
 			_, err := exec.LookPath(step.Tool)
 			if err != nil && errLocal != nil {
-				Log("INFO", "Command " + step.Tool + " is not available on this system. Skipping...")
+				Log("INFO", "Command "+step.Tool+" is not available on this system. Skipping...")
 				continue
 			}
 		}
@@ -184,7 +184,7 @@ func deployEnv(env string, cmd *cli.Command) (error, string) {
 
 			return errors.New("failed to deploy, step " + strconv.Itoa((stepIndex + 1)) + ": is there an issue with your command or code?"), ""
 		} else {
-			Log("INFO", "Completed step "+  strconv.Itoa((stepIndex+1)) + ", " + step.Tool + " (" + strconv.Itoa(int((float32((stepIndex+1))/float32(len(config.Pipeline)))*100))+"%) ("+step.Type+")")
+			Log("INFO", "Completed step "+strconv.Itoa((stepIndex+1))+", "+step.Tool+" ("+strconv.Itoa(int((float32((stepIndex+1))/float32(len(config.Pipeline)))*100))+"%) ("+step.Type+")")
 			if step.Type == "deploy" {
 				break
 			}
@@ -193,8 +193,7 @@ func deployEnv(env string, cmd *cli.Command) (error, string) {
 	return nil, port
 }
 
-var doneStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(lipgloss.Color("#0dbc79")).Padding(1,4)
-
+var doneStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(lipgloss.Color("#0dbc79")).Padding(1, 4)
 
 func dev(cc context.Context, cmd *cli.Command) error {
 	wd := cmd.StringArg("directory")
@@ -212,6 +211,6 @@ func dev(cc context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	fmt.Println(doneStyle.Render("Running!","- Local: http://ray.localhost:" + port))
-	select{}
+	fmt.Println(doneStyle.Render("Running!", "- Local: http://ray.localhost:"+port))
+	select {}
 }

@@ -1,4 +1,4 @@
-module pyrret.com/rayinstall
+module github.com/pyrretsoftware/ray/rayinstall
 
 go 1.24.1
 

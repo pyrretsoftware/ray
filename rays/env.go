@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"pyrret.com/pkgs/prjcnf"
+	"github.com/pyrretsoftware/ray/shared/prjcnf"
 )
 
 var exiting = false
@@ -80,7 +80,7 @@ func AddFiles(files []ProjectFile, dir string, logBuffer *strings.Builder) error
 				return err
 			}
 		}
-		rlog.Notify("Added file '" + file.Path + "'", "done")
+		rlog.Notify("Added file '"+file.Path+"'", "done")
 	}
 	return nil
 }
@@ -145,7 +145,7 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 		if process.State != "OK" || !process.Active || process.Ghost {
 			continue
 		}
-		
+
 		if process.Hash == "" {
 			rlog.Debug("Cant update: process hash is unset")
 			continue
@@ -154,7 +154,7 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 		branches := getBranches(process.Project.Src) //might lowkenuinely be a good idea to cache this
 		if branches == nil || branches[process.Branch] == "" {
 			rlog.Debug("Cant update: cant fetch new process hash")
-			failed = append(failed, process.Project.Name + ":" + process.Branch)
+			failed = append(failed, process.Project.Name+":"+process.Branch)
 			continue
 		}
 
@@ -177,7 +177,9 @@ func updateProjects(updateRollbacks bool) (failed []string) {
 func updateProjectsLegacy(updateRollbacks bool) (failed []string) {
 	failed = []string{}
 	for _, project := range rconf.Projects {
-		if project.CompatibilityMode == "docker" {continue}
+		if project.CompatibilityMode == "docker" {
+			continue
+		}
 		branches := getBranches(project.Src)
 		doUpdate := false
 
@@ -285,7 +287,7 @@ func deployLocalProcess(configPath string, dir string, project *project, swapfun
 			stepZeroLogBuffer.WriteString("Could not read project config.")
 			return
 		}
-		
+
 		config, err = prjcnf.TranslateAndMarshalConfig(_config)
 		if err != nil {
 			stepZeroLogBuffer.WriteString("Failed parsing project config, json unmarshaling error: " + err.Error())

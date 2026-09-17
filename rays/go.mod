@@ -1,4 +1,4 @@
-module pyrret.com/rays
+module github.com/pyrretsoftware/ray/rays
 
 go 1.25.0
 
