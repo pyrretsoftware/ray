@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -211,6 +213,13 @@ func dev(cc context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	fmt.Println()
 	fmt.Println(doneStyle.Render("Running!", "- Local: http://ray.localhost:"+port))
-	select {}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigChan
+	Log("INFO", "Shutting down")
+	return nil
 }
