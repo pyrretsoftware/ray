@@ -101,6 +101,8 @@ func makeRequest(cmd *cli.Command, req comRequest) (error, comResponse) {
 	}
 
 	target := cmd.String("remote")
+	key := cmd.String("hardkey")
+
 	if target == "" {
 		remotes, err := GetRemotes()
 		if err != nil {
@@ -143,14 +145,13 @@ func makeRequest(cmd *cli.Command, req comRequest) (error, comResponse) {
 			}
 		}
 		target = selected.URL
-		key, err := GetKey(selected.Authentication)
+		key, err = GetKey(selected.Authentication)
 		if err != nil {
 			return err, comResponse{}
 		}
-		req.Key = key
-
-
 	}
+	req.Key = key
+
 	c := getClient(target, localPath)
 
 	ba, err := json.Marshal(req)
