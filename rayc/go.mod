@@ -1,11 +1,12 @@
 module github.com/pyrretsoftware/ray/rayc
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/urfave/cli/v3 v3.11.0
+	github.com/pyrretsoftware/ray/shared v0.0.0-20260924164520-4d12df56066b
+	github.com/urfave/cli/v3 v3.14.0
 )
 
 require (
