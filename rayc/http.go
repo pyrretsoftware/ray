@@ -17,15 +17,15 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func getClient(rFlag string, unixAddr string) *http.Client {
-	if rFlag == "" {
+func getClient(target string, unixAddr string) *http.Client {
+	if target == "http://local-ray-server" {
 		if _, err := os.Stat(unixAddr); err != nil {
 			fmt.Println(redBold.Render("Could not find a comsocket on this machine."), "Is ray server installed here or did you intend to use a remote comsocket?")
 		}
 	}
 	transport := &http.Transport{
 		DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
-			if rFlag == "" {
+			if target == "" {
 				network = "unix"
 				addr = unixAddr
 			}
@@ -112,7 +112,7 @@ func makeRequest(cmd *cli.Command, req comRequest) (error, comResponse) {
 		remotes = append([]Remote{
 			{
 				Name: "Local server",
-				URL: "http://how-can-you-see-this",
+				URL: "http://local-ray-server",
 				Authentication: Authentication{
 					Type: "hardkey",
 					Hardkey: "ext:Rayc;This extension is used by rayc for local communications;https://ray.pyrret.com",

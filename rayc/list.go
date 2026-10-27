@@ -13,8 +13,8 @@ import (
 func list(cc context.Context, cmd *cli.Command) error {
 	err, resp := makeRequest(cmd, comRequest{
 		Action: "process:read",
-		Key:    cmd.String("hardkey"),
 	})
+	
 	if err != nil {
 		return err
 	}

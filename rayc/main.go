@@ -176,6 +176,11 @@ func main() {
 						Usage: "adds a remote to remotes.json",
 						Action: AddRemote,
 					},
+					{
+						Name: "where",
+						Usage: "gives the location of remotes.json",
+						Action: WhereRemote,
+					},
 				},
 			},
 			{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,6 +22,17 @@ type Remote struct {
 	Name           string
 	URL            string
 	Authentication Authentication
+}
+
+func WhereRemote(cc context.Context, cmd *cli.Command) error {
+	ePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remotesPath := filepath.Join(filepath.Dir(ePath), "remotes.json")
+	fmt.Println("You can edit remotes.json at", blueBold.Render(remotesPath))
+	return nil
 }
 
 func AddRemote(cc context.Context, cmd *cli.Command) error {
